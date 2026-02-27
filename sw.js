@@ -1,13 +1,18 @@
 const CACHE_NAME = 'hps-app-v1';
 const urlsToCache = [
     '/',
-    '/login.html',
     '/index.html',
+    '/vitals.html',
+    '/login.html',
     '/assets/css/style.css',
     '/assets/css/login.css',
+    '/assets/css/dashboard.css',
     '/assets/js/config.js',
     '/assets/js/login.js',
-    '/assets/js/app.js'
+    '/assets/js/db.js',
+    '/assets/js/sync.js',
+    '/assets/js/vitals.js',
+    '/icon.png'
 ];
 
 self.addEventListener('install', event => {

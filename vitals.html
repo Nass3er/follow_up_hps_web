@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>العلامات الحيوية - HPS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+    <div class="app-layout">
+        <nav class="top-nav">
+            <div class="brand">
+                <h1>🩺 نظام متابعة المرضى (العلامات الحيوية)</h1>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">🏠 الرئيسية</a>
+                <div class="user-info">
+                    <span id="cur-day"></span> - <span id="cur-date"></span>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section class="card section-search">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>الفرع</label>
+                        <select id="branch-list"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الترقيد</label>
+                        <div class="input-with-btn">
+                            <input type="number" id="adm-no-input"
+                                placeholder="أدخل رقم الترقيد (اضغط مفتاح Enter للبحث)">
+                            <button onclick="openAdmModal()" class="btn btn-primary"
+                                title="بحث في قائمة الترقيدات">🔍</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card section-patient">
+                <h3 class="section-title">بيانات المريض</h3>
+                <div class="patient-grid">
+                    <div class="info-item"><label>المريض</label><input type="text" id="p-name" readonly></div>
+                    <div class="info-item"><label>الرقم</label><input type="text" id="p-no" readonly></div>
+                    <div class="info-item"><label>العمر</label><input type="text" id="p-age" readonly></div>
+                    <div class="info-item"><label>الغرفة</label><input type="text" id="p-room" readonly></div>
+                    <div class="info-item"><label>السرير</label><input type="text" id="p-bed" readonly></div>
+                    <div class="info-item"><label>الجنس</label><input type="text" id="p-gender" readonly></div>
+                </div>
+            </section>
+
+            <section class="card section-controls">
+                <div class="grid-2 align-bottom">
+                    <div class="form-group">
+                        <label>تاريخ المتابعة:</label>
+                        <input type="date" id="doc-date-input">
+                    </div>
+                    <div class="form-group">
+                        <label>تقسيم الوقت (دقائق):</label>
+                        <input type="number" id="time-interval" value="30">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <button onclick="loadAndShowTable()" class="btn btn-success btn-block">عرض وتحديث
+                            الجدول</button>
+                    </div>
+                </div>
+            </section>
+
+            <div id="table-area" class="card" style="display: none;">
+                <div class="table-header">
+                    <h3 class="section-title">📊 جدول المتابعة اليومية</h3>
+                </div>
+                <div class="table-responsive">
+                    <table id="vitals-table" class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>الوقت</th>
+                                <th>الحرارة</th>
+                                <th>النبض</th>
+                                <th>التنفس</th>
+                                <th>SpO2</th>
+                                <th>الضغط</th>
+                                <th>الإجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-adm" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>قائمة الترقيدات</h3>
+                <span class="close-btn" onclick="closeModal('modal-adm')">&times;</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table id="adm-list-table" class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>رقم</th>
+                            <th>التاريخ</th>
+                            <th>المريض</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal('modal-adm')" class="btn btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-vitals" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="vitals-title">تسجيل علامات الساعة</h3>
+                <span class="close-btn" onclick="closeModal('modal-vitals')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="form-group"><label>الحرارة</label><input type="number" step="0.1" id="v-temp"
+                            placeholder="مثال: 37"></div>
+                    <div class="form-group"><label>النبض</label><input type="number" id="v-pulse"
+                            placeholder="مثال: 80"></div>
+                    <div class="form-group"><label>التنفس</label><input type="number" id="v-resp"
+                            placeholder="مثال: 16"></div>
+                    <div class="form-group"><label>SPO2</label><input type="number" id="v-spo2" placeholder="مثال: 98">
+                    </div>
+                    <div class="form-group"><label>الضغط 1 (انقباضي)</label><input type="number" id="v-bp1"
+                            placeholder="مثال: 120"></div>
+                    <div class="form-group"><label>الضغط 2 (انبساطي)</label><input type="number" id="v-bp2"
+                            placeholder="مثال: 80"></div>
+                </div>
+
+                <div class="nurse-section form-group" style="margin-top: 15px;">
+                    <label>الممرض:</label>
+                    <div class="input-with-btn">
+                        <input type="number" id="n-id" placeholder="رقم الممرض (مفتاح Enter للبحث)">
+                        <button onclick="openNurseModal()" class="btn btn-primary">🔍</button>
+                        <input type="text" id="n-name" placeholder="اسم الممرض" readonly
+                            style="flex: 2; background: #eee;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>الملاحظات:</label>
+                    <textarea id="v-notes" rows="3" placeholder="اكتب أي ملاحظات هنا..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="saveVitals()" class="btn btn-success">✅ حفظ البيانات</button>
+                <button onclick="closeModal('modal-vitals')" class="btn btn-secondary">❌ إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-nurse" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>قائمة الممرضين</h3>
+                <span class="close-btn" onclick="closeModal('modal-nurse')">&times;</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table id="nurse-list-table" class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>الرقم</th>
+                            <th>الاسم</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal('modal-nurse')" class="btn btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/sync.js"></script>
+    <script src="assets/js/vitals.js"></script>
+</body>
+
+</html>
