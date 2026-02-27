@@ -1,0 +1,18 @@
+:root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #ecf0f1; direction: rtl; margin: 0; padding: 10px; }
+.screen { max-width: 600px; margin: auto; }
+.card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+input, select, button { width: 100%; padding: 10px; border: 1px solid #bdc3c7; border-radius: 5px; box-sizing: border-box; }
+.btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; }
+.btn-show { background: var(--success); color: white; font-weight: bold; border: none; margin-top: 10px; }
+.header-info { background: var(--primary); color: white; padding: 10px; text-align: center; border-radius: 5px; margin-bottom: 10px; }
+.search-box { display: flex; gap: 5px; }
+.search-box button { width: 50px; background: var(--accent); color: white; }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; }
+.modal-content { background: white; width: 90%; margin: 15% auto; padding: 20px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+table, th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+th { background: #f8f9fa; }
+tr:hover { background: #f1f1f1; cursor: pointer; }
+.patient-card input { background: #f9f9f9; border: 1px solid #eee; font-weight: bold; }
