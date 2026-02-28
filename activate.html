@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفعيل البرنامج - HPS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .activate-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 40px 35px;
+            width: 95%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            text-align: center;
+        }
+
+        .machine-box {
+            background: #f0f4ff;
+            border: 2px dashed #6c8ebf;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .machine-id-text {
+            font-size: 20px;
+            font-family: monospace;
+            color: #c0392b;
+            font-weight: bold;
+            letter-spacing: 2px;
+            word-break: break-all;
+        }
+
+        .key-textarea {
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 13px;
+            min-height: 80px;
+            resize: vertical;
+            direction: ltr;
+        }
+
+        .key-textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .btn-activate {
+            width: 100%;
+            padding: 15px;
+            font-size: 17px;
+            margin-top: 15px;
+            border-radius: 12px;
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-msg.error {
+            background: #ffeaea;
+            color: #c0392b;
+            border: 1px solid #e74c3c;
+        }
+
+        .status-msg.success {
+            background: #eaffea;
+            color: #27ae60;
+            border: 1px solid #2ecc71;
+        }
+
+        details {
+            margin-top: 15px;
+            text-align: right;
+        }
+
+        summary {
+            cursor: pointer;
+            color: #888;
+            font-size: 12px;
+        }
+
+        .settings-inner {
+            margin-top: 10px;
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .settings-inner input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="activate-card">
+        <div style="font-size: 64px; margin-bottom: 10px;">🛡️</div>
+        <h2 style="color: #2c3e50; margin-bottom: 10px;">تفعيل نظام HPS</h2>
+        <p style="color: #888; font-size: 14px; margin-bottom: 5px;">هذه النسخة غير مفعلة. أرسل رمز الجهاز التالي للمطور
+            للحصول على مفتاح التفعيل.</p>
+
+        <!-- Trial Banner -->
+        <div id="trial-banner"
+            style="display:none; background: linear-gradient(135deg,#f0fff4,#e8ffe8); border: 2px solid #2ecc71; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            <div id="trial-text" style="font-weight: bold; font-size: 15px; margin-bottom: 10px;"></div>
+            <div style="background: #ddd; border-radius: 50px; height: 10px; overflow: hidden;">
+                <div id="trial-bar" style="height: 100%; border-radius: 50px; transition: width 0.5s ease;"></div>
+            </div>
+            <p style="font-size: 12px; color: #666; margin-top: 8px;">لتفادي انقطاع الخدمة، يرجى التواصل مع المطور لشراء
+                ترخيص قبل انتهاء الفترة التجريبية.</p>
+        </div>
+
+        <div class="machine-box">
+            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 6px;">رمز الجهاز الخاص
+                بالسيرفر:</label>
+            <div class="machine-id-text" id="machine-id">⏳ جاري التحميل...</div>
+            <button class="copy-btn" onclick="copyMachineId()">📋 نسخ الرمز</button>
+        </div>
+
+        <div style="text-align: right; margin-bottom: 5px;">
+            <label style="font-size: 14px; font-weight: bold;">🔑 مفتاح التفعيل:</label>
+        </div>
+        <textarea id="license-key" class="key-textarea"
+            placeholder="الصق مفتاح التفعيل الذي حصلت عليه من المطور هنا..."></textarea>
+
+        <button onclick="activateApp()" class="btn btn-primary btn-activate">تفعيل البرنامج الآن ✅</button>
+
+        <div id="status-msg" class="status-msg"></div>
+
+        <!-- Server settings toggle -->
+        <details>
+            <summary>⚙️ إعدادات السيرفر (اضغط للتوسيع)</summary>
+            <div class="settings-inner">
+                <input type="text" id="api-host" placeholder="آيبي السيرفر: مثال 192.168.1.5">
+                <input type="text" id="api-port" placeholder="البورت: مثال 80">
+                <button onclick="saveSettings()" class="btn btn-secondary"
+                    style="width:100%; padding:8px; font-size:13px;">💾 حفظ وإعادة تحميل</button>
+            </div>
+        </details>
+
+        <p style="margin-top: 20px; font-size: 11px; color: #ccc;">HPS © 2026 - جميع الحقوق محفوظة</p>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script>
+        let currentMachineId = '';
+
+        async function loadStatus() {
+            try {
+                const res = await fetch(`${getBaseApiUrl()}/License/status`);
+                if (!res.ok) throw new Error('connection');
+                const data = await res.json();
+                currentMachineId = data.machineId || '';
+                document.getElementById('machine-id').innerText = currentMachineId;
+
+                if (data.isLicensed) {
+                    // Already fully licensed, go directly
+                    showStatus('✅ البرنامج مفعل بترخيص كامل! يتم توجيهك...', 'success');
+                    setTimeout(() => window.location.href = 'login.html', 1200);
+                    return;
+                }
+
+                if (data.isInTrial) {
+                    // Show trial banner
+                    const days = data.trialDaysRemaining;
+                    const trialBanner = document.getElementById('trial-banner');
+                    const trialText = document.getElementById('trial-text');
+                    const trialBar = document.getElementById('trial-bar');
+                    trialBanner.style.display = 'block';
+                    trialText.innerText = `🎁 وضع التجربة المجانية - متبقي ${days} يوم${days === 1 ? '' : '/أيام'} من أصل 3`;
+                    trialBar.style.width = `${(days / 3) * 100}%`;
+                    trialBar.style.backgroundColor = days === 1 ? '#e74c3c' : days === 2 ? '#f39c12' : '#2ecc71';
+                    showStatus(`✅ يمكنك استخدام التطبيق الآن. متبقي ${days} يوم قبل انتهاء التجربة.`, 'success');
+                    setTimeout(() => window.location.href = 'login.html', 2500);
+                    return;
+                }
+
+                // No trial, no license
+                showStatus('❌ ' + data.message, 'error');
+
+            } catch (e) {
+                document.getElementById('machine-id').innerText = 'ERR_CONNECTION';
+                showStatus('❌ تعذر الاتصال بالسيرفر. راجع إعدادات السيرفر أدناه.', 'error');
+                document.querySelector('details').setAttribute('open', '');
+                const config = getApiConfig();
+                document.getElementById('api-host').value = config.host;
+                document.getElementById('api-port').value = config.port;
+            }
+        }
+
+        async function activateApp() {
+            const key = document.getElementById('license-key').value.trim();
+            if (!key) { showStatus('يرجى إدخال مفتاح التفعيل أولاً.', 'error'); return; }
+
+            try {
+                const res = await fetch(`${getBaseApiUrl()}/License/activate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ licenseKey: key })
+                });
+                const data = await res.json();
+                if (data.activated) {
+                    showStatus('✅ ' + data.message + ' سيتم توجيهك لصفحة الدخول...', 'success');
+                    setTimeout(() => window.location.href = 'login.html', 2000);
+                } else {
+                    showStatus('❌ ' + data.message, 'error');
+                }
+            } catch (e) {
+                showStatus('❌ تعذر الاتصال بالسيرفر.', 'error');
+            }
+        }
+
+        function copyMachineId() {
+            if (!currentMachineId || currentMachineId === 'ERR_CONNECTION') return;
+            navigator.clipboard.writeText(currentMachineId).then(() => {
+                showStatus('✅ تم نسخ رمز الجهاز!', 'success');
+                setTimeout(() => document.getElementById('status-msg').style.display = 'none', 2000);
+            });
+        }
+
+        function saveSettings() {
+            const h = document.getElementById('api-host').value.trim();
+            const p = document.getElementById('api-port').value.trim();
+            if (h) saveApiConfig(h, p || '80', 'hps');
+            location.reload();
+        }
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('status-msg');
+            el.innerText = msg;
+            el.className = `status-msg ${type}`;
+            el.style.display = 'block';
+        }
+
+        window.onload = loadStatus;
+    </script>
+</body>
+
+</html>

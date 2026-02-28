@@ -49,12 +49,6 @@ async function initData() {
     fetchNurses();
 }
 
-const getHeaders = () => ({
-    'Authorization': `Bearer ${getToken()}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-});
-
 async function loadBranches() {
     try {
         const res = await fetch(`${getBaseApiUrl()}/VitalSigns/branches`, {
@@ -100,10 +94,10 @@ async function searchAdmission(docNo) {
 }
 
 function handleFoundAdmission(list, docNo) {
-    if (!list) { alert('خطأ في الاتصال ولا توجد بيانات مخزنة'); return; }
+    if (!list) { appAlert('خطأ في الاتصال ولا توجد بيانات مخزنة', 'error'); return; }
     const admission = list.find(a => a.docNo == docNo);
     if (admission) selectAdmission(admission.docNo, admission.docSerial);
-    else alert("رقم الترقيد غير موجود");
+    else appAlert("رقم الترقيد غير موجود", 'error');
 }
 
 async function openAdmModal() {
@@ -156,7 +150,7 @@ async function selectAdmission(no, srl) {
             CURRENT_ADMISSION = details;
             renderPatientDetails(CURRENT_ADMISSION);
         } else {
-            alert("لا يتوفر اتصال بالإنترنت وليس لديك بيانات هذا المريض مخزنة محلياً");
+            appAlert("لا يتوفر اتصال بالإنترنت وليس لديك بيانات هذا المريض مخزنة محلياً", 'error');
         }
     }
 }
@@ -172,7 +166,7 @@ function renderPatientDetails(details) {
 }
 
 async function loadAndShowTable() {
-    if (!CURRENT_ADMISSION) return alert("الرجاء اختيار مريض أولاً");
+    if (!CURRENT_ADMISSION) return appAlert("الرجاء اختيار مريض أولاً", 'warning');
 
     const docDate = document.getElementById('doc-date-input').value;
     const interval = parseInt(document.getElementById('time-interval').value) || 30;
@@ -273,7 +267,10 @@ async function loadAndShowTable() {
                 <td>${record.spO2 || '-'}</td>
                 <td>${record.bloodPressureOne || '-'}/${record.bloodPressureTwo || '-'}</td>
                 <td>
-                    <button class="btn-edit" onclick="openEditModal('${record.docSrl}')">تعديل ✏️</button>
+                    <div style="display: flex; gap: 2px; width: 100%;">
+                        <button class="btn-edit" style="flex:1; padding: 5px; font-size: 14px; margin:0;" onclick="openEditModal('${record.docSrl}')">✏️</button>
+                        <button class="btn-delete" style="flex:1; padding: 5px; font-size: 14px; background: #e74c3c; color: white; border: none; border-radius: 4px; margin:0; cursor:pointer;" onclick="deleteVitalSign('${record.docSrl}')">🗑️</button>
+                    </div>
                 </td>
             `;
         } else {
@@ -281,7 +278,7 @@ async function loadAndShowTable() {
                 <td>${time}</td>
                 <td style="color:#aaa">-</td><td style="color:#aaa">-</td><td style="color:#aaa">-</td><td style="color:#aaa">-</td><td style="color:#aaa">-</td>
                 <td>
-                    <button class="btn-add" onclick="openVitalsModal('${time}')">إضافة ➕</button>
+                    <button class="btn-add" style="width:100%; padding: 5px; font-size: 14px;" onclick="openVitalsModal('${time}')">➕</button>
                 </td>
             `;
         }
@@ -312,7 +309,7 @@ function openEditModal(docSrl) {
 
         document.getElementById('modal-vitals').style.display = 'block';
     } else {
-        alert("تعذر العثور على بيانات السجل");
+        appAlert("تعذر العثور على بيانات السجل", 'error');
     }
 }
 
@@ -355,8 +352,8 @@ function openNurseModal() {
 }
 
 function openVitalsModal(time) {
-    if (!CURRENT_ADMISSION) return alert("اختر مريضاً أولاً");
-    if (!document.getElementById('branch-list').value) return alert("يرجى اختيار الفرع");
+    if (!CURRENT_ADMISSION) return appAlert("اختر مريضاً أولاً", 'warning');
+    if (!document.getElementById('branch-list').value) return appAlert("يرجى اختيار الفرع", 'warning');
 
     CURRENT_DOC_SRL = null;
     SELECTED_TIME = time;
@@ -376,17 +373,21 @@ function openVitalsModal(time) {
 
 async function saveVitals() {
     let currentMethod = 'POST';
+    let isUpdate = false;
+    let dto = null;
+    let url = '';
+
     try {
         const getValue = (id) => parseFloat(document.getElementById(id).value) || 0;
 
         // If docSrl contains local_, it means it's an offline generated ID that hasn't synced yet, 
         // we can't do a real PUT update on server. We treat it as POST/Offline re-update.
         const isActuallyLocal = CURRENT_DOC_SRL && CURRENT_DOC_SRL.toString().startsWith('local_');
-        const isUpdate = CURRENT_DOC_SRL !== null && !isActuallyLocal;
+        isUpdate = CURRENT_DOC_SRL !== null && !isActuallyLocal;
 
         currentMethod = 'POST';
 
-        const dto = {
+        dto = {
             docSrl: isUpdate ? parseInt(CURRENT_DOC_SRL) : 0,
             branchNo: parseInt(document.getElementById('branch-list').value),
             docNo: document.getElementById('adm-no-input').value.toString(),
@@ -410,18 +411,23 @@ async function saveVitals() {
         };
 
         if (!dto.temperature && !dto.pulseRate && !dto.respirationRate && !dto.spO2 && !dto.bloodPressureOne && !dto.bloodPressureTwo && !dto.notes.trim()) {
-            alert("⚠️ لا يمكن الحفظ! يجب إدخال علامة حيوية واحدة على الأقل أو كتابة ملاحظة.");
+            appAlert("⚠️ لا يمكن الحفظ! يجب إدخال علامة حيوية واحدة على الأقل أو كتابة ملاحظة.", 'warning');
             return;
         }
 
-        const url = isUpdate
+        url = isUpdate
             ? `${getBaseApiUrl()}/VitalSigns/update/${CURRENT_DOC_SRL}`
             : `${getBaseApiUrl()}/VitalSigns`;
 
         if (!navigator.onLine) {
-            // OfFLINE SAVING
-            await addUnsyncedVital(url, currentMethod, dto, isUpdate);
-            alert("⚠️ لا يتوفر اتصال بالإنترنت. يرجى العلم أنه تم حفظ القيم في هاتفك مؤقتاً وسيتم مزامنتها لاحقاً عند توفر الشبكة.");
+            // OfFLINE SAVING OR UPDATING LOCAL
+            if (isActuallyLocal) {
+                const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+                await updateUnsyncedVital(localId, dto);
+            } else {
+                await addUnsyncedVital(url, currentMethod, dto, isUpdate);
+            }
+            appAlert("⚠️ لا يتوفر اتصال بالإنترنت. تم حفظ القيم في هاتفك مؤقتاً وسيتم مزامنتها لاحقاً عند توفر الشبكة.", 'warning');
             closeModal('modal-vitals');
             CURRENT_DOC_SRL = null;
             checkSyncStatus();
@@ -436,7 +442,7 @@ async function saveVitals() {
         });
 
         if (res.ok) {
-            alert(isUpdate ? "✅ تم التعديل بنجاح" : "✅ تم الحفظ بنجاح");
+            appAlert(isUpdate ? "✅ تم التعديل بنجاح" : "✅ تم الحفظ بنجاح", 'success');
             closeModal('modal-vitals');
             CURRENT_DOC_SRL = null;
             loadAndShowTable();
@@ -451,15 +457,70 @@ async function saveVitals() {
                 } else {
                     errorMessages.push(JSON.stringify(jsonErr, null, 2));
                 }
-                alert(`❌ فشلت العملية (${res.status}):\n${errorMessages.join('\n')}`);
+                appAlert(`❌ فشلت العملية (${res.status}):\n${errorMessages.join('\n')}`, 'error');
             } catch (e) {
                 const errText = await res.text();
-                alert(`❌ فشلت العملية (${res.status}):\n${errText}`);
+                appAlert(`❌ فشلت العملية (${res.status}):\n${errText}`, 'error');
             }
         }
     } catch (error) {
-        console.error("Fetch/Sync error:", error);
-        alert(`⚠️ خطأ في الاتصال بالسيرفر. يرجى تفعيل وضع الانترنت للمزامنة الفورية.`);
+        console.error("Fetch error caught in saveVitals:", error);
+
+        // If the server is unreachable (even if wifi is ON)
+        if (error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            console.warn("Server unavailable. Falling back to offline local save.");
+            if (CURRENT_DOC_SRL && CURRENT_DOC_SRL.toString().startsWith('local_')) {
+                const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+                await updateUnsyncedVital(localId, dto);
+            } else {
+                await addUnsyncedVital(url, currentMethod, dto, isUpdate);
+            }
+            appAlert("⚠️ السيرفر غير متاح حالياً! تم حفظ القيم في الجوال مؤقتاً وسيتم مزامنتها لاحقاً.", 'warning');
+            closeModal('modal-vitals');
+            CURRENT_DOC_SRL = null;
+            checkSyncStatus();
+            loadAndShowTable();
+        } else {
+            appAlert(`⚠️ خطأ غير متوقع: ${error.message}`, 'error');
+        }
+    }
+}
+
+async function deleteVitalSign(docSrl) {
+    const isConfirmed = await appConfirm("هل أنت متأكد من حذف هذا السجل؟");
+    if (!isConfirmed) return;
+
+    if (docSrl.toString().startsWith('local_')) {
+        // Unsynced offline document
+        const id = parseInt(docSrl.toString().replace('local_', ''));
+        await removeUnsyncedVital(id);
+        appAlert("✅ تم الحذف من السجلات المؤقتة بنجاح", 'success');
+        checkSyncStatus();
+        loadAndShowTable();
+        return;
+    }
+
+    if (!navigator.onLine) {
+        appAlert("⚠️ لا يمكن حذف سجل تم مزامنته سابقاً بدون اتصال. يرجى الاتصال بالسيرفر أولاً.", 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/VitalSigns/delete/${docSrl}`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+
+        if (res.ok) {
+            appAlert("✅ تم الحذف بنجاح من قاعدة البيانات", 'success');
+            loadAndShowTable();
+        } else {
+            const err = await res.text();
+            appAlert(`❌ فشل الحذف: ${err}`, 'error');
+        }
+    } catch (e) {
+        console.error("Delete Error", e);
+        appAlert("⚠️ خطأ في الاتصال بالخادم أثناء محاولة الحذف", 'error');
     }
 }
 

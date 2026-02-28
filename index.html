@@ -27,7 +27,19 @@
 
         <main class="main-content">
             <h2 class="welcome-text">مرحباً بك في لوحة التحكم الرئيسية</h2>
-            <p style="color:var(--text-muted); margin-bottom: 30px;">اختر أحد الخدمات التالية للبدء بالعمل:</p>
+            <p style="color:var(--text-muted); margin-bottom: 20px;">اختر أحد الخدمات التالية للبدء بالعمل:</p>
+
+            <!-- Sync Card Container -->
+            <div id="sync-dashboard-card"
+                style="display: none; background: #fff3e0; border: 1px solid #ffb74d; border-radius: 12px; padding: 15px 20px; margin-bottom: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;"
+                onclick="window.location.href='sync.html'">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 24px;">🔄</span>
+                    <span style="font-size: 16px; font-weight: bold; color: #e67e22;" id="sync-dashboard-text">لديك
+                        سجلات تحتاج إلى مزامنة</span>
+                </div>
+                <span style="font-size: 20px; color: #e67e22;">⬅️</span>
+            </div>
 
             <div class="dashboard-grid">
 
@@ -37,11 +49,17 @@
                     <p>تسجيل علامات المريض الحيوية كل ساعة ومتابعة التطورات</p>
                 </a>
 
-                <a href="javascript:void(0)" class="dash-card disabled"
+                <!-- <a href="javascript:void(0)" class="dash-card disabled"
                     onclick="alert('سيتم إضافتها قريباً في التحديث القادم')">
                     <div class="dash-icon">💊</div>
                     <h3>صرف الأدوية</h3>
                     <p>متابعة وصرف الأدوية للمرضى حسب أوامر الطبيب</p>
+                </a> -->
+
+                <a href="settings.html" class="dash-card">
+                    <div class="dash-icon">⚙️</div>
+                    <h3>الإعدادات والنسخ</h3>
+                    <p>إدارة البيانات المحلية والنسخ الاحتياطي</p>
                 </a>
 
                 <a href="javascript:void(0)" class="dash-card disabled"

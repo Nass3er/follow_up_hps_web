@@ -11,12 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('last_u_act')) document.getElementById('u-act').value = localStorage.getItem('last_u_act');
 });
 
-function switchTab(tabId) {
+function switchTab(tabId, event) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
     document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
 }
 
 async function login() {
@@ -70,7 +72,21 @@ async function login() {
     } catch (e) {
         document.getElementById('login-btn').innerText = 'تسجيل الدخول';
         document.getElementById('login-btn').disabled = false;
-        errorDiv.innerText = "خطأ في الاتصال بالسيرفر. يرجى التحقق من إعدادات السيرفر والاتصال.";
+
+        // Offline Fallback for Login
+        if (localStorage.getItem('last_u_id') === userId &&
+            localStorage.getItem('last_u_year') === year &&
+            localStorage.getItem('last_u_act') === act &&
+            localStorage.getItem('offline_token')) {
+
+            console.warn("Offline Login applied.");
+            saveToken(localStorage.getItem('offline_token'));
+            window.appAlert("⚠️ السيرفر غير متصل، تم تسجيل الدخول في وضع (عدم الاتصال) باستخدام بياناتك المتوفرة في الجهاز.", 'warning').then(() => {
+                window.location.href = 'index.html';
+            });
+        } else {
+            errorDiv.innerText = "تعذر الاتصال بالسيرفر للمصادقة. يجب أن تكون متصلاً بالسيرفر في أول مرة لتسجيل الدخول.";
+        }
     }
 }
 

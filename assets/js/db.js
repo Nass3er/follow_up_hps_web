@@ -61,3 +61,13 @@ function removeUnsyncedVital(id) {
         });
     });
 }
+
+function updateUnsyncedVital(id, dto) {
+    return getFromDB('unsynced_vitals', id).then(record => {
+        if (record) {
+            record.dto = dto;
+            record.timestamp = new Date().getTime();
+            return saveToDB('unsynced_vitals', record, false);
+        }
+    });
+}

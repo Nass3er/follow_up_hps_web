@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المزامنة المادية - HPS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+    <div class="app-layout">
+        <nav class="top-nav">
+            <div class="brand">
+                <h1>🔄 مركز المزامنة (البيانات المحلية)</h1>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">🏠 الرجوع</a>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section class="card">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h3 class="section-title" style="margin:0; font-size:16px;">📝 السجلات غير المزامنة</h3>
+                    <button onclick="performSyncAll()" class="btn btn-primary" id="btn-sync-all"
+                        style="font-size: 13px; padding: 6px 10px; display: none; white-space: nowrap;">🔄 بدء
+                        المزامنة</button>
+                </div>
+
+                <div id="sync-progress-container" style="display: none; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span id="sync-progress-text" style="font-weight: bold; color: var(--primary);">جاري
+                            المزامنة...</span>
+                        <span id="sync-progress-percent">0%</span>
+                    </div>
+                    <div style="width: 100%; background: #eee; border-radius: 8px; height: 10px; overflow: hidden;">
+                        <div id="sync-progress-bar"
+                            style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s ease;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="unsynced-table" class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>تاريخ التسجيل</th>
+                                <th>وقت المتابعة</th>
+                                <th>الحرارة</th>
+                                <th>النبض</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div id="no-sync-data"
+                    style="text-align: center; padding: 30px; display: none; color: var(--text-muted);">
+                    <h2>🎉 لا يوجد أي بيانات تحتاج لمزامنة! كل شيء محفوظ.</h2>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Edit Sync Modal -->
+    <div id="modal-edit-sync" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3>تعديل العلامات المحلية (قبل المزامنة)</h3>
+                <span class="close-btn" onclick="closeModal('modal-edit-sync')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-sync-id">
+                <div class="grid-2">
+                    <div class="form-group"><label>الحرارة</label><input type="number" step="0.1" id="e-temp"></div>
+                    <div class="form-group"><label>النبض</label><input type="number" id="e-pulse"></div>
+                    <div class="form-group"><label>التنفس</label><input type="number" id="e-resp"></div>
+                    <div class="form-group"><label>SPO2</label><input type="number" id="e-spo2"></div>
+                    <div class="form-group"><label>الضغط 1</label><input type="number" id="e-bp1"></div>
+                    <div class="form-group"><label>الضغط 2</label><input type="number" id="e-bp2"></div>
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>الملاحظات:</label>
+                    <textarea id="e-notes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="saveEditedSync()" class="btn btn-success">✅ تعديل</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/sync.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadUnsyncedTable);
+    </script>
+</body>
+
+</html>
