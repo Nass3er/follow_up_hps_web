@@ -26,16 +26,18 @@ async function login() {
     errorDiv.innerText = '';
 
     const userId = document.getElementById('u-id').value;
+    const password = document.getElementById('u-pass').value;
     const year = document.getElementById('u-year').value;
     const act = document.getElementById('u-act').value;
 
-    if (!userId || !year || !act) {
-        errorDiv.innerText = 'يرجى تعبئة جميع الحقول!';
+    if (!userId || !password || !year || !act) {
+        errorDiv.innerText = 'يرجى تعبئة جميع الحقول (رقم المستخدم، الباسوورد، السنة، النشاط)';
         return;
     }
 
     const dto = {
         userId: parseInt(userId),
+        password: password,
         financialYear: parseInt(year),
         activityNo: parseInt(act)
     };
@@ -57,7 +59,11 @@ async function login() {
         btn.disabled = false;
 
         if (!res.ok) {
-            errorDiv.innerText = 'بيانات الدخول غير صحيحة أو السيرفر غير متوفر!';
+            if (res.status === 401) {
+                errorDiv.innerText = '⚠️ بيانات الدخول غير صحيحة! تأكد من رقم المستخدم وكلمة المرور.';
+            } else {
+                errorDiv.innerText = '❌ حدث خطأ في السيرفر أو تعذر الاتصال!';
+            }
             return;
         }
 
