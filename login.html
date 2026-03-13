@@ -25,6 +25,29 @@
 
             <!-- صفحة تسجيل الدخول -->
             <div id="login-tab" class="tab-content active">
+                <div class="device-info"
+                    style="background: #fdf2e9; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px dashed #e67e22;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #7f8c8d;">رقم سيريال الجهاز</p>
+                    <div
+                        style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #fbd2b3;">
+                        <strong id="display-device-serial"
+                            style="font-size: 16px; color: #d35400; user-select: all; letter-spacing: 1px;">جاري
+                            التحميل...</strong>
+                        <button type="button" id="copy-serial-btn" onclick="copySerial(this)"
+                            style="background: #e67e22; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal', sans-serif; font-size: 13px; display: flex; align-items: center; gap: 5px; width: 80px; justify-content: center;">
+                            <span id="copy-status-icon" style="display: flex; align-items: center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="copy-svg">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </span>
+                            <span id="copy-status-text">نسخ</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>رقم المستخدم</label>
                     <input type="number" id="u-id" placeholder="أدخل رقم المستخدم">

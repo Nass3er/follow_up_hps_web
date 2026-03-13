@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('last_u_id')) document.getElementById('u-id').value = localStorage.getItem('last_u_id');
     if (localStorage.getItem('last_u_year')) document.getElementById('u-year').value = localStorage.getItem('last_u_year');
     if (localStorage.getItem('last_u_act')) document.getElementById('u-act').value = localStorage.getItem('last_u_act');
+
+    // Display device serial for the user to copy
+    const serialElem = document.getElementById('display-device-serial');
+    if (serialElem) serialElem.innerText = getDeviceSerial();
 });
 
 function switchTab(tabId, event) {
@@ -39,7 +43,8 @@ async function login() {
         userId: parseInt(userId),
         password: password,
         financialYear: parseInt(year),
-        activityNo: parseInt(act)
+        activityNo: parseInt(act),
+        deviceId: getDeviceSerial()
     };
 
     const apiUrl = getBaseApiUrl();
@@ -61,6 +66,9 @@ async function login() {
         if (!res.ok) {
             if (res.status === 401) {
                 errorDiv.innerText = '⚠️ بيانات الدخول غير صحيحة! تأكد من رقم المستخدم وكلمة المرور.';
+            } else if (res.status === 403) {
+                const errorData = await res.json();
+                window.appAlert(`${errorData.message} <br><br> <strong style="font-size:24px;color:#d35400;">${errorData.deviceId}</strong>`, 'warning');
             } else {
                 errorDiv.innerText = '❌ حدث خطأ في السيرفر أو تعذر الاتصال!';
             }
@@ -132,4 +140,34 @@ async function saveAndTestSettings() {
         statusDiv.innerText = '❌ تم الحفظ، لكن فشل الاتصال بالسيرفر. يرجى التأكد من البيانات أو تشغيل السيرفر.';
         statusDiv.classList.add('error');
     }
+}
+
+function copySerial() {
+    const serialText = document.getElementById('display-device-serial').innerText;
+    const btn = document.getElementById('copy-serial-btn');
+    const iconContainer = document.getElementById('copy-status-icon');
+    const textElem = document.getElementById('copy-status-text');
+
+    const originalIcon = iconContainer.innerHTML;
+    const originalText = textElem.innerText;
+    const originalBg = btn.style.background;
+
+    navigator.clipboard.writeText(serialText).then(() => {
+        // Change to green checkmark
+        btn.style.background = '#27ae60';
+        textElem.innerText = 'تم!';
+        iconContainer.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" 
+                 stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+        `;
+
+        // Reset after 2 seconds
+        setTimeout(() => {
+            btn.style.background = originalBg;
+            textElem.innerText = originalText;
+            iconContainer.innerHTML = originalIcon;
+        }, 2000);
+    });
 }

@@ -12,6 +12,56 @@ function saveApiConfig(host, port, service) {
     localStorage.setItem('api_service', service);
 }
 
+function getDeviceSerial() {
+    let serial = localStorage.getItem('device_serial');
+    if (!serial) {
+        // Since pure web apps cannot access real IMEI or hardware serials for security reasons,
+        // we generate a unique Hardware Fingerprint based on the device properties.
+        try {
+            const cores = navigator.hardwareConcurrency || 'X';
+            const mem = navigator.deviceMemory || 'X';
+            const screenRes = window.screen.width + 'x' + window.screen.height + 'x' + window.screen.colorDepth;
+            const platform = navigator.platform || 'X';
+
+            // Context for WebGL to get GPU Info (Stable Hardware ID)
+            let gpu = 'GPU';
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (debugInfo) {
+                        gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'GPU';
+                    }
+                }
+            } catch (e) { }
+
+            const cleanGpu = gpu.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+            // We EXCLUDE navigator.userAgent and navigator.language because they differ between browsers.
+            // We only use Hardware Traits.
+            const rawData = screenRes + platform + cores + mem + cleanGpu;
+
+            let hash = 0;
+            for (let i = 0; i < rawData.length; i++) {
+                hash = ((hash << 5) - hash) + rawData.charCodeAt(i);
+                hash |= 0;
+            }
+
+            const hwHash = Math.abs(hash).toString(16).toUpperCase().padStart(8, '0');
+
+            // Stable Hardware Serial based on internal components
+            serial = `HPS-${cores}C${mem}G-${cleanGpu.substring(0, 4)}-${hwHash}`;
+        } catch (e) {
+            serial = 'HPS-UNQ-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        localStorage.setItem('device_serial', serial);
+    }
+    return serial;
+}
+
+
 function getBaseApiUrl() {
     const { host, port, service } = getApiConfig();
     const portString = port ? `:${port}` : '';
@@ -49,15 +99,8 @@ function getHeaders() {
     };
 }
 
-// Intercept 402 (License Invalid/Expired) from the backend
-const _origFetch = window.fetch;
-window.fetch = async function (...args) {
-    const response = await _origFetch.apply(this, args);
-    if (response.status === 402 && !window.location.pathname.includes('activate')) {
-        window.location.href = 'activate.html';
-    }
-    return response;
-};
+// We no longer intercept 402 or redirect to activate.html globally
+// Authentication and device validation will be handled fully in the login process.
 
 // Global Custom Alerts
 function appAlert(message, type = 'info') {

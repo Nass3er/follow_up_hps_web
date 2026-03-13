@@ -1,6 +1,6 @@
 // db.js - IndexedDB Helper for Offline First Architecture
 const DB_NAME = 'HPS_Offline_DB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function initDB() {
     return new Promise((resolve, reject) => {
@@ -13,6 +13,10 @@ function initDB() {
             if (!db.objectStoreNames.contains('vitals_history')) db.createObjectStore('vitals_history', { keyPath: 'cacheKey' });
             if (!db.objectStoreNames.contains('patients_details')) db.createObjectStore('patients_details', { keyPath: 'cacheKey' });
             if (!db.objectStoreNames.contains('unsynced_vitals')) db.createObjectStore('unsynced_vitals', { keyPath: 'id', autoIncrement: true });
+
+            // Intake & Output Stores
+            if (!db.objectStoreNames.contains('io_history')) db.createObjectStore('io_history', { keyPath: 'cacheKey' });
+            if (!db.objectStoreNames.contains('unsynced_io')) db.createObjectStore('unsynced_io', { keyPath: 'id', autoIncrement: true });
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
@@ -68,6 +72,30 @@ function updateUnsyncedVital(id, dto) {
             record.dto = dto;
             record.timestamp = new Date().getTime();
             return saveToDB('unsynced_vitals', record, false);
+        }
+    });
+}
+
+function addUnsyncedIO(url, method, dto, isUpdate) {
+    return saveToDB('unsynced_io', { url, method, dto, isUpdate, timestamp: new Date().getTime() }, false);
+}
+
+function removeUnsyncedIO(id) {
+    return initDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('unsynced_io', 'readwrite');
+            tx.objectStore('unsynced_io').delete(id);
+            tx.oncomplete = () => resolve();
+        });
+    });
+}
+
+function updateUnsyncedIO(id, dto) {
+    return getFromDB('unsynced_io', id).then(record => {
+        if (record) {
+            record.dto = dto;
+            record.timestamp = new Date().getTime();
+            return saveToDB('unsynced_io', record, false);
         }
     });
 }

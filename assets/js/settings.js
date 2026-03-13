@@ -3,7 +3,7 @@
 async function exportData() {
     try {
         const data = {};
-        const stores = ['branches', 'admissions', 'nurses', 'vitals_history', 'patients_details', 'unsynced_vitals'];
+        const stores = ['branches', 'admissions', 'nurses', 'vitals_history', 'patients_details', 'unsynced_vitals', 'io_history', 'unsynced_io'];
         for (const store of stores) {
             data[store] = await getFromDB(store) || [];
         }
@@ -42,7 +42,7 @@ async function importData(event) {
     reader.onload = async (e) => {
         try {
             const data = JSON.parse(e.target.result);
-            const stores = ['branches', 'admissions', 'nurses', 'vitals_history', 'patients_details', 'unsynced_vitals'];
+            const stores = ['branches', 'admissions', 'nurses', 'vitals_history', 'patients_details', 'unsynced_vitals', 'io_history', 'unsynced_io'];
             for (const store of stores) {
                 if (data[store]) {
                     await saveToDB(store, data[store], true);
@@ -63,9 +63,10 @@ async function clearCache() {
     if (!isConfirmed) return;
 
     try {
-        // We only clear history data, NOT unsynced_vitals!
+        // We only clear history data
         await saveToDB('admissions', [], true);
         await saveToDB('vitals_history', [], true);
+        await saveToDB('io_history', [], true);
         await saveToDB('patients_details', [], true);
 
         appAlert('✨ تم تنظيف الذاكرة المؤقتة بنجاح، التطبيق الآن أسرع وأخف!', 'success');
