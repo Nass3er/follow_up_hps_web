@@ -64,7 +64,10 @@ async function login() {
         btn.disabled = false;
 
         if (!res.ok) {
-            if (res.status === 401) {
+            if (res.status === 402) {
+                const errorData = await res.json();
+                window.appAlert(`⚠️ ${errorData.message || 'الترخيص منتهي!'}`, 'error');
+            } else if (res.status === 401) {
                 errorDiv.innerText = '⚠️ بيانات الدخول غير صحيحة! تأكد من رقم المستخدم وكلمة المرور.';
             } else if (res.status === 403) {
                 const errorData = await res.json();

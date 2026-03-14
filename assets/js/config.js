@@ -99,9 +99,29 @@ function getHeaders() {
     };
 }
 
-// We no longer intercept 402 or redirect to activate.html globally
-// Authentication and device validation will be handled fully in the login process.
+// Global Fetch Interceptor to catch 402 License Expired and other crucial globals
+const originalFetch = window.fetch;
+window.fetch = async function (...args) {
+    try {
+        const response = await originalFetch(...args);
+        if (response.status === 402) {
+            const clone = response.clone();
+            let msg = 'الترخيص التابع للمنشأة منتهي! يرجى التواصل مع الدعم الفني.';
+            try {
+                const data = await clone.json();
+                if (data && data.message) msg = data.message;
+            } catch (e) { }
 
+            // Show alert and redirect to login
+            window.appAlert(`⚠️ ${msg}`, 'error').then(() => {
+                logout();
+            });
+        }
+        return response;
+    } catch (err) {
+        throw err;
+    }
+};
 // Global Custom Alerts
 function appAlert(message, type = 'info') {
     return new Promise((resolve) => {
