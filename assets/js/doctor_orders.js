@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     const ss = String(now.getSeconds()).padStart(2, '0');
-    if(document.getElementById('doc-time')) document.getElementById('doc-time').value = `${hh}:${mm}:${ss}`;
+    if (document.getElementById('doc-time')) document.getElementById('doc-time').value = `${hh}:${mm}:${ss}`;
 
     loadBranches();
     if (navigator.onLine) preloadAllItems();
@@ -56,37 +56,37 @@ function updateUIForState(state) {
         // الحالة الابتدائية: زر الإضافة فعّال، باقي أزرار العمل معطّلة
         IS_EDIT_MODE = false;
         CURRENT_ORDER_SRL = null;
-        if(btnAdd) { btnAdd.disabled = false; }
-        if(btnEdit) btnEdit.disabled = true;
-        if(btnDelete) btnDelete.disabled = true;
-        if(btnSave) btnSave.disabled = true;
+        if (btnAdd) { btnAdd.disabled = false; }
+        if (btnEdit) btnEdit.disabled = true;
+        if (btnDelete) btnDelete.disabled = true;
+        if (btnSave) btnSave.disabled = true;
         inputs.forEach(i => i.disabled = true);
     } else if (state === 'NEW') {
         // المستخدم ضغط على إضافة: زر الإضافة يصبح باهتاً
         IS_EDIT_MODE = false;
         CURRENT_ORDER_SRL = null;
-        if(btnAdd) btnAdd.disabled = true;
-        if(btnEdit) btnEdit.disabled = true;
-        if(btnDelete) btnDelete.disabled = true;
-        if(btnSave) btnSave.disabled = false;
+        if (btnAdd) btnAdd.disabled = true;
+        if (btnEdit) btnEdit.disabled = true;
+        if (btnDelete) btnDelete.disabled = true;
+        if (btnSave) btnSave.disabled = false;
         inputs.forEach(i => {
-           if (!i.readOnly && i.style.backgroundColor !== 'rgb(238, 238, 238)') {
-               i.disabled = false;
-           }
+            if (!i.readOnly && i.style.backgroundColor !== 'rgb(238, 238, 238)') {
+                i.disabled = false;
+            }
         });
     } else if (state === 'VIEW') {
         IS_EDIT_MODE = false;
-        if(btnAdd) btnAdd.disabled = false;
-        if(btnEdit) btnEdit.disabled = false;
-        if(btnDelete) btnDelete.disabled = false;
-        if(btnSave) btnSave.disabled = true;
+        if (btnAdd) btnAdd.disabled = false;
+        if (btnEdit) btnEdit.disabled = false;
+        if (btnDelete) btnDelete.disabled = false;
+        if (btnSave) btnSave.disabled = true;
         inputs.forEach(i => i.disabled = true);
     } else if (state === 'EDIT') {
         IS_EDIT_MODE = true;
-        if(btnAdd) btnAdd.disabled = true;
-        if(btnEdit) btnEdit.disabled = true;
-        if(btnDelete) btnDelete.disabled = true;
-        if(btnSave) btnSave.disabled = false;
+        if (btnAdd) btnAdd.disabled = true;
+        if (btnEdit) btnEdit.disabled = true;
+        if (btnDelete) btnDelete.disabled = true;
+        if (btnSave) btnSave.disabled = false;
         inputs.forEach(i => {
             if (i.id !== 'adm-no-input' && i.id !== 'doc-no') {
                 i.disabled = false;
@@ -103,7 +103,7 @@ function addNewOrder() {
     document.getElementById('patient-info-section').style.display = 'none';
     document.getElementById('table-area').style.display = 'none';
     CURRENT_ADMISSION = null;
-    
+
     document.getElementById('prcdr-typ').value = ""; // Default empty
     onProcedureTypeChanged(); // Will clear table area
     updateUIForState('NEW');
@@ -166,7 +166,7 @@ async function openHistoryModal() {
         }));
 
         CACHED_HISTORY = [...localHistory, ...history];
-        
+
         CACHED_HISTORY.sort((a, b) => {
             const srlA = a.docSrl.toString().startsWith('local_') ? 9999999999 : parseInt(a.docSrl);
             const srlB = b.docSrl.toString().startsWith('local_') ? 9999999999 : parseInt(b.docSrl);
@@ -200,7 +200,7 @@ function renderHistory(list) {
 
 function filterHistory() {
     const term = document.getElementById('history-search-input').value.toLowerCase();
-    const filtered = CACHED_HISTORY.filter(i => 
+    const filtered = CACHED_HISTORY.filter(i =>
         Object.values(i).some(val => val && val.toString().toLowerCase().includes(term))
     );
     renderHistory(filtered);
@@ -219,7 +219,7 @@ async function loadOrder(docSrl) {
                     master: {
                         ...record.dto,
                         docDate: record.dto.docDate,
-                        docTime: record.dto.docTime.split('T')[1] 
+                        docTime: record.dto.docTime.split('T')[1]
                     },
                     details: record.dto.details
                 };
@@ -232,7 +232,7 @@ async function loadOrder(docSrl) {
             if (res.ok) {
                 data = await res.json();
             } else {
-                let errData = {}; try { errData = await res.json(); } catch(e){}
+                let errData = {}; try { errData = await res.json(); } catch (e) { }
                 appAlert("فشل تحميل تفاصيل السجل: " + (errData.message || res.statusText || res.status), 'error');
                 return;
             }
@@ -241,13 +241,13 @@ async function loadOrder(docSrl) {
         if (data) {
             const m = data.master;
             CURRENT_ORDER_SRL = docSrl;
-            
+
             document.getElementById('branch-list').value = m.branchNo;
             document.getElementById('adm-no-input').value = m.docNoAdmission;
             document.getElementById('doc-no').value = m.docNo;
             document.getElementById('doc-date').value = m.docDate;
-            
-            const timePart = (m.docTime || '').substring(0,8);
+
+            const timePart = (m.docTime || '').substring(0, 8);
             document.getElementById('doc-time').value = timePart;
             document.getElementById('prcdr-typ').value = m.procedureType;
             document.getElementById('prorty-no').value = m.priorityNo || 1;
@@ -268,7 +268,7 @@ async function loadOrder(docSrl) {
             document.getElementById('patient-info-section').style.display = 'block';
             document.getElementById('table-area').style.display = 'block';
 
-            onProcedureTypeChanged(); 
+            onProcedureTypeChanged();
             const tbody = document.getElementById('details-tbody');
             tbody.innerHTML = '';
             DETAIL_ROWS_COUNT = 0;
@@ -279,7 +279,7 @@ async function loadOrder(docSrl) {
                 const rowId = DETAIL_ROWS_COUNT;
                 const tr = document.createElement('tr');
                 tr.id = `detail-row-${rowId}`;
-                
+
                 const expectedDateFormatted = det.expectedDate ? det.expectedDate.split('T')[0] : '';
                 const codeVal = det.itemCode || det.I_CODE || '';
                 const nameVal = det.itemName || det.I_NAME || '';
@@ -306,7 +306,7 @@ async function loadOrder(docSrl) {
                         <td><button class="btn btn-secondary" onclick="removeDetailRow(${rowId})" style="padding:5px;">❌</button></td>
                     `;
                 } else if (procedureType === 1) {
-                     tr.innerHTML = `
+                    tr.innerHTML = `
                         <td><div class="input-with-btn"><button class="mini-search-btn" onclick="openItemsModal(${rowId})">🔍</button><input type="text" id="row-code-${rowId}" value="${codeVal}"></div></td>
                         <td><input type="text" id="row-name-${rowId}" value="${nameVal}"></td>
                         <td><input type="number" id="row-price-${rowId}" value="${det.price || det.PRICE || 0}"></td>
@@ -317,7 +317,7 @@ async function loadOrder(docSrl) {
                         <td><button class="btn btn-secondary" onclick="removeDetailRow(${rowId})" style="padding:5px;">❌</button></td>
                     `;
                 } else {
-                     tr.innerHTML = `
+                    tr.innerHTML = `
                         <td><div class="input-with-btn"><button class="mini-search-btn" onclick="openItemsModal(${rowId})">🔍</button><input type="text" id="row-code-${rowId}" value="${codeVal}"></div></td>
                         <td><input type="text" id="row-name-${rowId}" value="${nameVal}"></td>
                         <td><input type="number" id="row-price-${rowId}" value="${det.price || det.PRICE || 0}"></td>
@@ -429,8 +429,8 @@ async function openAdmModal() {
 function filterAdmissions() {
     const term = document.getElementById('adm-search-input').value.toLowerCase();
     const list = window.CURRENT_ADM_LIST || [];
-    const filtered = list.filter(a => 
-        (a.patientName && a.patientName.toLowerCase().includes(term)) || 
+    const filtered = list.filter(a =>
+        (a.patientName && a.patientName.toLowerCase().includes(term)) ||
         (a.docNo && a.docNo.toString().includes(term))
     );
     const tbody = document.querySelector('#adm-list-table tbody');
@@ -484,7 +484,7 @@ async function selectAdmission(no, srl) {
         document.getElementById('p-adm-date').value = details.admDate ? new Date(details.admDate).toLocaleDateString() : '';
 
         document.getElementById('patient-info-section').style.display = 'block';
-        
+
         // Only show table-area if a procedure type is already selected (e.g. during an edit/load)
         const prcdrTyp = document.getElementById('prcdr-typ').value;
         if (prcdrTyp) {
@@ -492,7 +492,7 @@ async function selectAdmission(no, srl) {
         } else {
             document.getElementById('table-area').style.display = 'none';
         }
-        
+
         // Focus on procedure type after selection
         document.getElementById('prcdr-typ').focus();
 
@@ -711,7 +711,7 @@ async function preloadAllItems() {
             }
         }
         console.log("All doctor items preloaded to cache.");
-    } catch (e) {}
+    } catch (e) { }
 }
 
 function filterItems() {
@@ -728,7 +728,7 @@ function renderItemsFilter(list) {
     const tbody = document.getElementById('items-tbody');
     tbody.innerHTML = '';
 
-    const limit = list.slice(0, 100); 
+    const limit = list.slice(0, 100);
     limit.forEach(i => {
         let tr = document.createElement('tr');
         const code = i.itemCode || i.I_CODE || i.item_CODE || '';
@@ -843,10 +843,10 @@ async function saveOrder() {
 
     try {
         const method = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_') ? 'PUT' : 'POST';
-        const url = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_') 
-            ? `${getBaseApiUrl()}/DoctorOrder/${CURRENT_ORDER_SRL}` 
+        const url = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')
+            ? `${getBaseApiUrl()}/DoctorOrder/${CURRENT_ORDER_SRL}`
             : `${getBaseApiUrl()}/DoctorOrder`;
-        
+
         if (!navigator.onLine) {
             if (CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_')) {
                 const localId = parseInt(CURRENT_ORDER_SRL.toString().replace('local_', ''));
@@ -876,8 +876,8 @@ async function saveOrder() {
     } catch (e) {
         console.error("Save Order Error:", e);
         const method = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_') ? 'PUT' : 'POST';
-        const url = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_') 
-            ? `${getBaseApiUrl()}/DoctorOrder/${CURRENT_ORDER_SRL}` 
+        const url = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')
+            ? `${getBaseApiUrl()}/DoctorOrder/${CURRENT_ORDER_SRL}`
             : `${getBaseApiUrl()}/DoctorOrder`;
 
         if (CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_')) {

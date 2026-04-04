@@ -2,7 +2,11 @@
 const DB_NAME = 'HPS_Offline_DB';
 const DB_VERSION = 4;
 
+let dbInstance = null;
+
 function initDB() {
+    if (dbInstance) return Promise.resolve(dbInstance);
+
     return new Promise((resolve, reject) => {
         const request = window.indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = (e) => {
@@ -23,7 +27,10 @@ function initDB() {
             if (!db.objectStoreNames.contains('unsynced_doctor_orders')) db.createObjectStore('unsynced_doctor_orders', { keyPath: 'id', autoIncrement: true });
             if (!db.objectStoreNames.contains('items_cache')) db.createObjectStore('items_cache', { keyPath: 'cacheKey' });
         };
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            dbInstance = request.result;
+            resolve(dbInstance);
+        };
         request.onerror = () => reject(request.error);
     });
 }

@@ -194,4 +194,13 @@ function appConfirm(message) {
         });
     });
 }
-
+// Global Service Worker Registration for Offline Support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            console.log('SW: Registered at scope:', reg.scope);
+        }).catch(err => {
+            console.warn('SW: Registration failed:', err);
+        });
+    });
+}
