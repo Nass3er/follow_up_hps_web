@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أوامر الأطباء - HPS</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .input-group label {
+            margin-bottom: 0;
+            width: 80px;
+            font-size: 14px;
+        }
+
+        /* Specific sizing */
+        #doctor-name,
+        #patient-name {
+            flex: 2;
+            background: #eee;
+        }
+
+        .mini-search-btn {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .mandatory-field {
+            background-color: #fffde7 !important; /* أبيض مائل للأصفر */
+            border: 1px solid #fbc02d !important;
+        }
+
+        .mandatory-field:focus {
+            background-color: #fff9c4 !important;
+            border-color: #f9a825 !important;
+            box-shadow: 0 0 5px rgba(249, 168, 37, 0.3) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout">
+        <nav class="top-nav">
+            <div class="brand">
+                <h1>🩺 نظام متابعة المرضى (أوامر الأطباء)</h1>
+            </div>
+            <div class="nav-actions">
+                <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">🏠 الرئيسية</a>
+                <div class="user-info">
+                    <span id="cur-day"></span> - <span id="cur-date"></span>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="action-bar">
+                <button class="btn btn-success" id="btn-add" onclick="addNewOrder()">➕ إضافة</button>
+                <button class="btn btn-warning" id="btn-edit" onclick="enableEditing()" disabled>✏️ تعديل</button>
+                <button class="btn btn-danger" id="btn-delete" onclick="deleteOrder()" disabled>🗑️ حذف</button>
+                <button class="btn btn-primary" id="btn-search-orders" onclick="openHistoryModal()">🔍 بحث الأوامر</button>
+            </div>
+
+            <!-- قسم المعلومات الاساسية للامر (Master) -->
+            <section class="card section-search">
+                <h3 class="section-title">بيانات الأمر الأساسية (Master)</h3>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>الفرع</label>
+                        <select id="branch-list" class="mandatory-field"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>رقم الترقيد</label>
+                        <div class="input-with-btn">
+                            <input type="number" id="adm-no-input" class="mandatory-field" placeholder="ادخل رقم الترقيد واضغط Enter">
+                            <button onclick="openAdmModal()" class="btn btn-primary"
+                                title="بحث في قائمة الترقيدات">🔍</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>رقم الأمر</label>
+                        <input type="number" id="doc-no" value="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>تاريخ الأمر</label>
+                        <input type="date" id="doc-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label>وقت الأمر</label>
+                        <input type="time" id="doc-time" value="00:00:00" step="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>نوع الأمر</label>
+                        <input type="text" id="typ-name" value="عام" readonly style="background-color: #eee;">
+                        <input type="hidden" id="typ-no" value="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>نوع المريض</label>
+                        <input type="text" id="ptnt-typ-name" value="مريض داخلي" readonly
+                            style="background-color: #eee;">
+                        <input type="hidden" id="ptnt-typ" value="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>نوع الإجراء الطبي</label>
+                        <select id="prcdr-typ" class="mandatory-field" onchange="onProcedureTypeChanged()">
+                            <option value="">-- اختر نوع الإجراء --</option>
+                            <option value="1">1- أدوية</option>
+                            <option value="2">2- فحوصات</option>
+                            <option value="3">3- أشعة</option>
+                            <option value="4">4- عمليات</option>
+                            <option value="5">5- إجراءات أخرى</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>الأولوية</label>
+                        <select id="prorty-no">
+                            <option value="1">1- عادي</option>
+                            <option value="2">2- مستعجل</option>
+                            <option value="3">3- حرجة</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>رقم المرجع (اختياري)</label>
+                        <input type="text" id="ref-no">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>ملاحظة عامة (اختياري)</label>
+                        <textarea id="doc-dsc" rows="2"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- تفاصيل بيانات الترقيد المحددة ستظهر هنا -->
+            <section id="patient-info-section" class="card section-patient" style="display: none;">
+                <h3 class="section-title">بيانات المريض والطبيب</h3>
+
+                <div class="patient-grid">
+                    <div class="info-item" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
+                        <label style="color: var(--primary); font-size: 13px; margin-bottom: 5px;">المريض</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="patient-no" readonly style="width: 80px; text-align: center; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
+                            <input type="text" id="patient-name" readonly style="flex: 1; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
+                        </div>
+                    </div>
+
+                    <div class="info-item" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
+                        <label style="color: var(--primary); font-size: 13px; margin-bottom: 5px;">الطبيب</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="doctor-no" readonly style="width: 80px; text-align: center; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
+                            <input type="text" id="doctor-name" readonly style="flex: 1; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
+                        </div>
+                    </div>
+                    <div class="info-item"><label>الغرفة</label><input type="text" id="p-room" readonly></div>
+                    <div class="info-item"><label>السرير</label><input type="text" id="p-bed" readonly></div>
+                    <div class="info-item"><label>القسم</label><input type="text" id="p-dept" readonly></div>
+                    <div class="info-item"><label>الجنس</label><input type="text" id="p-gender" readonly></div>
+                    <div class="info-item"><label>العمر</label><input type="text" id="p-age" readonly></div>
+                    <div class="info-item"><label>تاريخ الترقيد</label><input type="text" id="p-adm-date" readonly>
+                    </div>
+                </div>
+            </section>
+
+            <!-- قسم التفاصيل (Details) -->
+            <section id="table-area" class="card" style="display: none;">
+                <div class="table-header">
+                    <h3 class="section-title" id="details-title">📋 تفاصيل الإجراء</h3>
+                </div>
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table id="details-table" class="modern-table" style="min-width: 800px;">
+                        <thead>
+                            <tr id="details-thead-tr">
+                                <!-- سيتم بناؤه ديناميكياً بواسطة JS حسب نوع الإجراء -->
+                            </tr>
+                        </thead>
+                        <tbody id="details-tbody">
+                            <!-- صفوف التفاصيل -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 25px; text-align: center; padding: 15px; background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    <button class="btn btn-success" id="btn-save" onclick="saveOrder()"
+                        style="padding: 12px 40px; font-weight: bold; font-size: 16px; width: 100%; max-width: 300px;">💾 حفظ الطلب وإرساله</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- نافذة البحث في الترقيدات -->
+    <div id="modal-adm" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>قائمة الترقيدات</h3>
+                <span class="close-btn" onclick="closeModal('modal-adm')">&times;</span>
+            </div>
+            <div style="padding: 10px;">
+                <input type="text" id="adm-search-input" placeholder="ابحث باسم المريض أو رقم الترقيد..."
+                    style="width: 100%; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"
+                    onkeyup="filterAdmissions()">
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table id="adm-list-table" class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الترقيد</th>
+                            <th>تاريخ الترقيد</th>
+                            <th>اسم المريض</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal('modal-adm')" class="btn btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة منبثقة للبحث في الإجراءات (فحوصات / أشعة الخ) -->
+    <div id="modal-items" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3 id="modal-items-title">قائمة الإجراءات مسبقة الصنع</h3>
+                <span class="close-btn" onclick="closeModal('modal-items')">&times;</span>
+            </div>
+            <div style="padding: 10px;">
+                <input type="text" id="item-search-input" placeholder="ابحث بالإسم أو الكود هنا..."
+                    style="width: 100%; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"
+                    onkeyup="filterItems()">
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table id="items-list-table" class="modern-table">
+                    <thead>
+                        <tr id="items-thead-tr">
+                            <!-- مبني ديناميكيا -->
+                        </tr>
+                    </thead>
+                    <tbody id="items-tbody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal('modal-items')" class="btn btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة البحث في الأوامر السابقة -->
+    <div id="modal-history" class="modal">
+        <div class="modal-content modal-lg">
+            <div class="modal-header">
+                <h3>الأوامر السابقة</h3>
+                <span class="close-btn" onclick="closeModal('modal-history')">&times;</span>
+            </div>
+            <div style="padding: 10px;">
+                <input type="text" id="history-search-input" placeholder="ابحث في أي عمود هنا..."
+                    style="width: 100%; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"
+                    onkeyup="filterHistory()">
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table id="history-list-table" class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الأمر</th>
+                            <th>التاريخ</th>
+                            <th>نوع الإجراء</th>
+                            <th>اسم الطبيب</th>
+                            <th>اسم المريض</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/sync.js"></script>
+    <script src="assets/js/doctor_orders.js"></script>
+</body>
+
+</html>

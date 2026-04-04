@@ -138,6 +138,11 @@
                 <h3>قائمة الترقيدات</h3>
                 <span class="close-btn" onclick="closeModal('modal-adm')">&times;</span>
             </div>
+            <div style="padding: 10px;">
+                <input type="text" id="adm-search-input" placeholder="ابحث باسم المريض أو رقم الترقيد..."
+                    style="width: 100%; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"
+                    onkeyup="filterAdmissions()">
+            </div>
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table id="adm-list-table" class="modern-table">
                     <thead>

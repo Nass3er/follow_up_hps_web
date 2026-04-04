@@ -1,6 +1,6 @@
 // db.js - IndexedDB Helper for Offline First Architecture
 const DB_NAME = 'HPS_Offline_DB';
-const DB_VERSION = 2;
+const DB_VERSION = 4;
 
 function initDB() {
     return new Promise((resolve, reject) => {
@@ -17,6 +17,11 @@ function initDB() {
             // Intake & Output Stores
             if (!db.objectStoreNames.contains('io_history')) db.createObjectStore('io_history', { keyPath: 'cacheKey' });
             if (!db.objectStoreNames.contains('unsynced_io')) db.createObjectStore('unsynced_io', { keyPath: 'id', autoIncrement: true });
+
+            // Doctor Order Stores
+            if (!db.objectStoreNames.contains('doctor_orders_history')) db.createObjectStore('doctor_orders_history', { keyPath: 'cacheKey' });
+            if (!db.objectStoreNames.contains('unsynced_doctor_orders')) db.createObjectStore('unsynced_doctor_orders', { keyPath: 'id', autoIncrement: true });
+            if (!db.objectStoreNames.contains('items_cache')) db.createObjectStore('items_cache', { keyPath: 'cacheKey' });
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
@@ -96,6 +101,30 @@ function updateUnsyncedIO(id, dto) {
             record.dto = dto;
             record.timestamp = new Date().getTime();
             return saveToDB('unsynced_io', record, false);
+        }
+    });
+}
+
+function addUnsyncedDoctorOrder(url, method, dto, isUpdate) {
+    return saveToDB('unsynced_doctor_orders', { url, method, dto, isUpdate, timestamp: new Date().getTime() }, false);
+}
+
+function removeUnsyncedDoctorOrder(id) {
+    return initDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('unsynced_doctor_orders', 'readwrite');
+            tx.objectStore('unsynced_doctor_orders').delete(id);
+            tx.oncomplete = () => resolve();
+        });
+    });
+}
+
+function updateUnsyncedDoctorOrder(id, dto) {
+    return getFromDB('unsynced_doctor_orders', id).then(record => {
+        if (record) {
+            record.dto = dto;
+            record.timestamp = new Date().getTime();
+            return saveToDB('unsynced_doctor_orders', record, false);
         }
     });
 }

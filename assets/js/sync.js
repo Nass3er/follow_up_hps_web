@@ -9,7 +9,8 @@ async function checkSyncStatus() {
     try {
         const unsyncedVitals = await getFromDB('unsynced_vitals') || [];
         const unsyncedIO = await getFromDB('unsynced_io') || [];
-        const totalUnsynced = unsyncedVitals.length + unsyncedIO.length;
+        const unsyncedOrders = await getFromDB('unsynced_doctor_orders') || [];
+        const totalUnsynced = unsyncedVitals.length + unsyncedIO.length + unsyncedOrders.length;
 
         // Remove old floating badge if it exists
         const oldBadge = document.getElementById('sync-badge-container');
@@ -47,11 +48,13 @@ async function loadUnsyncedTable() {
 
     const unsyncedVitals = (await getFromDB('unsynced_vitals')) || [];
     const unsyncedIO = (await getFromDB('unsynced_io')) || [];
+    const unsyncedOrders = (await getFromDB('unsynced_doctor_orders')) || [];
 
     // Combine with tags
     const all = [
         ...unsyncedVitals.map(v => ({ ...v, type: 'vitals', label: 'علامات حيوية' })),
-        ...unsyncedIO.map(io => ({ ...io, type: 'io', label: 'سوائل' }))
+        ...unsyncedIO.map(io => ({ ...io, type: 'io', label: 'سوائل' })),
+        ...unsyncedOrders.map(o => ({ ...o, type: 'order', label: 'أمر طبيب' }))
     ].sort((a, b) => b.timestamp - a.timestamp);
 
     const tableParent = document.getElementById('unsynced-table');
@@ -80,12 +83,14 @@ async function loadUnsyncedTable() {
         let details = "";
         if (item.type === 'vitals') {
             details = `حرارة: ${item.dto.temperature}, نبض: ${item.dto.pulseRate}`;
-        } else {
+        } else if (item.type === 'io') {
             details = `داخل: ${item.dto.inIvf + item.dto.inOral}, خارج: ${item.dto.outUrine}`;
+        } else {
+            details = `نوع: ${item.dto.procedureType === 1 ? 'أدوية' : 'إجراءات'}, أصناف: ${item.dto.details.length}`;
         }
 
         tr.innerHTML = `
-            <td><span class="badge ${item.type === 'vitals' ? 'badge-info' : 'badge-warning'}">${item.label}</span></td>
+            <td><span class="badge ${item.type === 'vitals' ? 'badge-info' : item.type === 'io' ? 'badge-warning' : 'badge-success'}">${item.label}</span></td>
             <td>${d}</td>
             <td>${vTime}</td>
             <td>${details}</td>
@@ -101,7 +106,8 @@ async function deleteSyncItem(type, id) {
     const isConfirmed = await appConfirm('هل أنت متأكد من حذف هذا السجل نهائياً قبل ارساله للسيرفر؟');
     if (isConfirmed) {
         if (type === 'vitals') await removeUnsyncedVital(id);
-        else await removeUnsyncedIO(id);
+        else if (type === 'io') await removeUnsyncedIO(id);
+        else await removeUnsyncedDoctorOrder(id);
         loadUnsyncedTable();
     }
 }
@@ -114,9 +120,11 @@ async function performSyncAll() {
 
     const unsyncedVitals = await getFromDB('unsynced_vitals') || [];
     const unsyncedIO = await getFromDB('unsynced_io') || [];
+    const unsyncedOrders = await getFromDB('unsynced_doctor_orders') || [];
     const all = [
         ...unsyncedVitals.map(v => ({ ...v, type: 'vitals' })),
-        ...unsyncedIO.map(io => ({ ...io, type: 'io' }))
+        ...unsyncedIO.map(io => ({ ...io, type: 'io' })),
+        ...unsyncedOrders.map(o => ({ ...o, type: 'order' }))
     ];
 
     if (all.length === 0) return;
@@ -146,7 +154,8 @@ async function performSyncAll() {
 
             if (res.ok) {
                 if (item.type === 'vitals') await removeUnsyncedVital(item.id);
-                else await removeUnsyncedIO(item.id);
+                else if (item.type === 'io') await removeUnsyncedIO(item.id);
+                else await removeUnsyncedDoctorOrder(item.id);
                 successCount++;
             } else {
                 failCount++;

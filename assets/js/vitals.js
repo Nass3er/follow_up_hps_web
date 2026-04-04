@@ -118,6 +118,7 @@ async function openAdmModal() {
 }
 
 function renderAdmissionsTable(list) {
+    window.CURRENT_ADM_LIST = list;
     const tbody = document.querySelector('#adm-list-table tbody');
     tbody.innerHTML = '';
     list.forEach(a => {
@@ -127,6 +128,23 @@ function renderAdmissionsTable(list) {
         tbody.appendChild(tr);
     });
     document.getElementById('modal-adm').style.display = 'block';
+}
+
+function filterAdmissions() {
+    const term = document.getElementById('adm-search-input').value.toLowerCase();
+    const list = window.CURRENT_ADM_LIST || [];
+    const filtered = list.filter(a => 
+        (a.patientName && a.patientName.toLowerCase().includes(term)) || 
+        (a.docNo && a.docNo.toString().includes(term))
+    );
+    const tbody = document.querySelector('#adm-list-table tbody');
+    tbody.innerHTML = '';
+    filtered.forEach(a => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${a.docNo}</td><td>${new Date(a.date).toLocaleDateString()}</td><td>${a.patientName}</td>`;
+        tr.onclick = () => { selectAdmission(a.docNo, a.docSerial); closeModal('modal-adm'); };
+        tbody.appendChild(tr);
+    });
 }
 
 async function selectAdmission(no, srl) {

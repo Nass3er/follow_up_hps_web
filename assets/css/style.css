@@ -84,6 +84,18 @@ body {
     padding-bottom: 10px;
 }
 
+.action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    align-items: center;
+}
+
 /* Grids */
 .grid-2 {
     display: grid;
@@ -104,6 +116,10 @@ body {
 /* Forms */
 .form-group {
     margin-bottom: 5px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
 }
 
 .form-group label {
@@ -243,6 +259,22 @@ body {
     overflow: hidden;
 }
 
+.modern-table input, 
+.modern-table select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.modern-table input:focus, 
+.modern-table select:focus {
+    outline: none;
+    border-color: var(--primary-light);
+}
+
 .modern-table th,
 .modern-table td {
     padding: 12px 15px;
@@ -259,6 +291,23 @@ body {
 .modern-table tbody tr:hover {
     background: #f1f8ff;
     cursor: pointer;
+}
+
+/* Modal specific table styling - bold + slightly smaller font */
+.modal .modern-table td {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.modal .modern-table th {
+    font-size: 13px;
+}
+
+/* Dim the add button when it's disabled (active mode) */
+#btn-add:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(40%);
 }
 
 /* Modals */
@@ -439,13 +488,32 @@ body {
     .patient-grid {
         grid-template-columns: 1fr;
     }
+    
+    .action-bar {
+        gap: 8px;
+        padding: 10px;
+        justify-content: center;
+    }
+
+    .action-bar .btn {
+        flex: 1 1 45%; 
+        font-size: 13px;
+        padding: 8px 5px;
+    }
 
     .modern-table th,
     .modern-table td {
         padding: 8px 3px;
-        font-size: 11px;
+        font-size: 12px;
         white-space: nowrap;
         text-align: center;
+    }
+
+    .modern-table input,
+    .modern-table select {
+        font-size: 12px;
+        padding: 6px 4px;
+        min-width: 60px;
     }
 
     /* Small action buttons in mobile tables */
