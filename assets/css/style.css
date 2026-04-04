@@ -25,6 +25,26 @@ body {
     direction: rtl;
 }
 
+.mandatory-field {
+    background-color: #fffde7 !important; /* أبيض مائل للأصفر */
+    border: 1px solid #fbc02d !important;
+}
+
+.mandatory-field:focus {
+    background-color: #fff9c4 !important;
+    border-color: #f9a825 !important;
+    box-shadow: 0 0 5px rgba(249, 168, 37, 0.3) !important;
+}
+
+.modal .modern-table tbody tr td {
+    background-color: #fffde7 !important;
+    border-bottom: 1px solid #c4a692 !important;;
+}
+
+.modal .modern-table tbody tr:hover td {
+    background-color: #fff9c4 !important;
+}
+
 /* Layout */
 .app-layout {
     display: flex;
