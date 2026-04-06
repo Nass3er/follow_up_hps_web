@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hps-app-v3'; // Version incremented for update detection
+const CACHE_NAME = 'hps-app-v4'; // Increment version to clear old cache and integrate missing files
 const urlsToCache = [
     './',
     './index.html',
@@ -10,6 +10,7 @@ const urlsToCache = [
     './sync.html',
     './assets/css/style.css',
     './assets/css/login.css',
+    './assets/css/dashboard.css',
     './assets/js/config.js',
     './assets/js/login.js',
     './assets/js/db.js',
@@ -22,18 +23,16 @@ const urlsToCache = [
     'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap'
 ];
 
-// Install Event: Cache essential assets
 self.addEventListener('install', event => {
-    self.skipWaiting(); // Force the waiting service worker to become the active service worker
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('SW: Pre-caching v3');
+            console.log('SW: Pre-caching v4 (fixed dependencies)');
             return cache.addAll(urlsToCache);
         })
     );
 });
 
-// Activate Event: Clear old caches and take control
 self.addEventListener('activate', event => {
     event.waitUntil(
         Promise.all([
@@ -41,20 +40,18 @@ self.addEventListener('activate', event => {
                 return Promise.all(
                     cacheNames.map(cache => {
                         if (cache !== CACHE_NAME) {
-                            console.log('SW: Deleting old cache:', cache);
+                            console.log('SW: Deleting legacy cache:', cache);
                             return caches.delete(cache);
                         }
                     })
                 );
             }),
-            self.clients.claim() // Immediately take control of all open clients
+            self.clients.claim()
         ])
     );
 });
 
-// Fetch Event: Stale-while-revalidate for assets, network-first for others (optional strategy)
 self.addEventListener('fetch', event => {
-    // Only handle GET requests and avoid API calls
     if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
         return;
     }
@@ -67,9 +64,7 @@ self.addEventListener('fetch', event => {
                         cache.put(event.request, networkResponse.clone());
                     }
                     return networkResponse;
-                }).catch(() => {
-                    // Fail silently or handle fallback
-                });
+                }).catch(() => {});
                 return cachedResponse || fetchPromise;
             });
         })
