@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hps-app-v2';
+const CACHE_NAME = 'hps-app-v3'; // Version incremented for update detection
 const urlsToCache = [
     './',
     './index.html',
@@ -22,53 +22,55 @@ const urlsToCache = [
     'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap'
 ];
 
-// Install Event: Caching Assets
+// Install Event: Cache essential assets
 self.addEventListener('install', event => {
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('SW: Pre-caching assets');
-                return cache.addAll(urlsToCache);
-            })
-            .then(() => self.skipWaiting())
-    );
-});
-
-// Activate Event: Cleanup Old Caches
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cache => {
-                    if (cache !== CACHE_NAME) {
-                        console.log('SW: Clearing old cache:', cache);
-                        return caches.delete(cache);
-                    }
-                })
-            );
+        caches.open(CACHE_NAME).then(cache => {
+            console.log('SW: Pre-caching v3');
+            return cache.addAll(urlsToCache);
         })
     );
 });
 
-// Fetch Event: Stale-While-Revalidate Strategy
+// Activate Event: Clear old caches and take control
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        Promise.all([
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cache => {
+                        if (cache !== CACHE_NAME) {
+                            console.log('SW: Deleting old cache:', cache);
+                            return caches.delete(cache);
+                        }
+                    })
+                );
+            }),
+            self.clients.claim() // Immediately take control of all open clients
+        ])
+    );
+});
+
+// Fetch Event: Stale-while-revalidate for assets, network-first for others (optional strategy)
 self.addEventListener('fetch', event => {
-    // Skip non-GET requests and API calls for this strategy
+    // Only handle GET requests and avoid API calls
     if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
         return;
     }
 
     event.respondWith(
         caches.open(CACHE_NAME).then(cache => {
-            return cache.match(event.request).then(response => {
+            return cache.match(event.request).then(cachedResponse => {
                 const fetchPromise = fetch(event.request).then(networkResponse => {
                     if (networkResponse && networkResponse.status === 200) {
                         cache.put(event.request, networkResponse.clone());
                     }
                     return networkResponse;
                 }).catch(() => {
-                    // Fail silently or handle specific offline fallback
+                    // Fail silently or handle fallback
                 });
-                return response || fetchPromise;
+                return cachedResponse || fetchPromise;
             });
         })
     );
