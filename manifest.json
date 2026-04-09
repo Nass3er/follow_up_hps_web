@@ -15,40 +15,22 @@
     "icons": [
         {
             "src": "icon.png",
-            "sizes": "512x512",
+            "sizes": "1024x1024",
             "type": "image/png",
             "purpose": "any maskable"
-        },
-        {
-            "src": "icon.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "icon.png",
-            "sizes": "144x144",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "icon.png",
-            "sizes": "96x96",
-            "type": "image/png",
-            "purpose": "any"
         }
     ],
     "screenshots": [
         {
             "src": "screenshot1.png",
-            "sizes": "1080x1920",
+            "sizes": "427x795",
             "type": "image/png",
             "form_factor": "narrow",
             "label": "شاشة تسجيل الدخول"
         },
         {
             "src": "screenshot2.png",
-            "sizes": "1920x1080",
+            "sizes": "427x795",
             "type": "image/png",
             "form_factor": "wide",
             "label": "لوحة التحكم"
