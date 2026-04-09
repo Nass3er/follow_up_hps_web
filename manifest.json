@@ -37,5 +37,21 @@
             "type": "image/png",
             "purpose": "any"
         }
+    ],
+    "screenshots": [
+        {
+            "src": "screenshot1.png",
+            "sizes": "1080x1920",
+            "type": "image/png",
+            "form_factor": "narrow",
+            "label": "شاشة تسجيل الدخول"
+        },
+        {
+            "src": "screenshot2.png",
+            "sizes": "1920x1080",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "لوحة التحكم"
+        }
     ]
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hps-app-v4'; // Increment version to clear old cache and integrate missing files
+const CACHE_NAME = 'hps-app-v5'; // Update to trigger installation with proper offline fallback
 const urlsToCache = [
     './',
     './index.html',
@@ -64,7 +64,15 @@ self.addEventListener('fetch', event => {
                         cache.put(event.request, networkResponse.clone());
                     }
                     return networkResponse;
-                }).catch(() => {});
+                }).catch(() => {
+                    // Critical: if we are completely offline and navigating to a page not in cache, never show "No Internet"
+                    if (event.request.mode === 'navigate') {
+                        return cache.match('./index.html') || cache.match('./login.html');
+                    }
+                    return null;
+                });
+                
+                // Return cached data immediately if we have it, else wait for network
                 return cachedResponse || fetchPromise;
             });
         })
