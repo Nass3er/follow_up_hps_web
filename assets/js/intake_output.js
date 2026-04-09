@@ -175,18 +175,43 @@ function renderPatientDetails(details) {
 async function loadAndShowTable() {
     if (!CURRENT_ADMISSION) return appAlert("الرجاء اختيار مريض أولاً", 'warning');
 
-    const docDate = document.getElementById('doc-date-input').value;
+    const docDate = document.getElementById('doc-date-input').value; // Get the selected date (YYYY-MM-DD)
     const interval = parseInt(document.getElementById('time-interval').value) || 30;
     const cacheString = `${CURRENT_ADMISSION.docSrl}_${docDate}`;
 
+    const parseDate = (s) => {
+        if (!s) return "";
+        let clean = s.replace(/\//g, '-').split('T')[0].split(' ')[0];
+        let parts = clean.split('-');
+        if (parts.length < 3) return "";
+        if (parts[0].length === 4) { // YYYY-MM-DD
+            return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        } else if (parts[2].length === 4) { // DD-MM-YYYY
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        return clean;
+    };
+    const targetDate = parseDate(docDate);
+
     let savedData = [];
     try {
-        const res = await fetch(`${getBaseApiUrl()}/IntakeOutput/${CURRENT_ADMISSION.docSrl}`, {
+        // Updated to pass date if backend supports it (similar to vitals.js)
+        const res = await fetch(`${getBaseApiUrl()}/IntakeOutput/${CURRENT_ADMISSION.docSrl}?docDate=${docDate}`, {
             method: 'GET',
             headers: getHeaders()
         });
         if (res.ok) {
-            savedData = await res.json();
+            const rawData = await res.json();
+            // Normalize server records: filter by date strictly
+            savedData = rawData.filter(d => {
+                const date1 = parseDate(d.docTime);
+                const date2 = parseDate(d.docDate);
+                return date1 === targetDate || date2 === targetDate;
+            }).map(d => {
+                let t = d.docTime.includes('T') ? d.docTime.split('T')[1] : (d.docTime.includes(' ') ? d.docTime.split(' ')[1] : d.docTime);
+                t = t.split('.')[0]; // Remove milliseconds if any
+                return { ...d, docTime: t };
+            });
             await saveToDB('io_history', [{ cacheKey: cacheString, data: savedData }], false);
         } else {
             const err = await res.json();
@@ -201,24 +226,28 @@ async function loadAndShowTable() {
     // Inject unsynced
     const unsynced = await getFromDB('unsynced_io');
     if (unsynced) {
-        const localItems = unsynced.filter(u => u.dto.docSrlAdmt == CURRENT_ADMISSION.docSrl);
-        localItems.forEach(u => {
-            const timePart = u.dto.docTime.split('T')[1];
-            const existingIndex = savedData.findIndex(d => d.docTime === timePart);
-            let localFormat = {
-                docSrl: u.dto.docSrl || `local_${u.id}`,
-                docTime: timePart,
-                nurseEmpNo: u.dto.nurseEmpNo,
-                inIvf: u.dto.inIvf, inOral: u.dto.inOral, inNgt: u.dto.inNgt, inBld: u.dto.inBld, inOthr: u.dto.inOthr,
-                outUrine: u.dto.outUrine, outGstrc: u.dto.outGstrc, outEmss: u.dto.outEmss, outDrng1: u.dto.outDrng1, outDrng2: u.dto.outDrng2, outOthr: u.dto.outOthr,
-                notes: u.dto.notes
-            };
-            if (existingIndex >= 0) savedData[existingIndex] = localFormat;
-            else savedData.push(localFormat);
+        const localItems = unsynced.filter(u => 
+            u.dto.docSrlAdmt == CURRENT_ADMISSION.docSrl && 
+            u.dto.docTime && u.dto.docTime.startsWith(docDate)
+        ).map(u => ({
+            docSrl: `local_${u.id}`,
+            docTime: u.dto.docTime.split('T')[1].split('.')[0],
+            nurseEmpNo: u.dto.nurseEmpNo,
+            inIvf: u.dto.inIvf, inOral: u.dto.inOral, inNgt: u.dto.inNgt, inBld: u.dto.inBld, inOthr: u.dto.inOthr,
+            outUrine: u.dto.outUrine, outGstrc: u.dto.outGstrc, outEmss: u.dto.outEmss, outDrng1: u.dto.outDrng1, outDrng2: u.dto.outDrng2, outOthr: u.dto.outOthr,
+            notes: u.dto.notes
+        }));
+
+        localItems.forEach(li => {
+            const existingIndex = savedData.findIndex(d => d.docTime === li.docTime);
+            if (existingIndex >= 0) savedData[existingIndex] = li;
+            else savedData.push(li);
         });
     }
 
     lastFetchedData = savedData;
+
+
 
     let totalDayIn = 0;
     let totalDayOut = 0;
@@ -359,7 +388,7 @@ async function saveIO() {
         bedNo: parseInt(CURRENT_ADMISSION.bedNo) || 0,
         roomSer: parseInt(CURRENT_ADMISSION.roomService) || 0,
         buildingNo: parseInt(CURRENT_ADMISSION.buldNo) || 0,
-        docTime: `2000-01-01T${SELECTED_TIME}`,
+        docTime: `${document.getElementById('doc-date-input').value}T${SELECTED_TIME}`,
         nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,
         inIvf: getValue('in-ivf'), inOral: getValue('in-oral'), inNgt: getValue('in-ngt'), inBld: getValue('in-bld'), inOthr: getValue('in-othr'),
         outUrine: getValue('out-urine'), outGstrc: getValue('out-gstrc'), outEmss: getValue('out-emss'), outDrng1: getValue('out-drng1'), outDrng2: getValue('out-drng2'), outOthr: getValue('out-othr'),
