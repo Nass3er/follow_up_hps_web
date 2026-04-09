@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hps-app-v5'; // Update to trigger installation with proper offline fallback
+const CACHE_NAME = 'hps-app-v7';
 const urlsToCache = [
     './',
     './index.html',
@@ -19,16 +19,21 @@ const urlsToCache = [
     './assets/js/intake_output.js',
     './assets/js/doctor_orders.js',
     './assets/js/settings.js',
-    './icon.png',
-    'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap'
+    './icon.png'
 ];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('SW: Pre-caching v4 (fixed dependencies)');
-            return cache.addAll(urlsToCache);
+            console.log('SW: Pre-caching v7 (Resilient Installation)');
+            return Promise.all(
+                urlsToCache.map(url => {
+                    return cache.add(url).catch(err => {
+                        console.warn('SW: Non-critical pre-cache failed for:', url, err);
+                    });
+                })
+            );
         })
     );
 });
