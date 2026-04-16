@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load last login credentials
     if (localStorage.getItem('last_u_id')) document.getElementById('u-id').value = localStorage.getItem('last_u_id');
+    if (localStorage.getItem('last_u_brn')) document.getElementById('u-brn').value = localStorage.getItem('last_u_brn');
     if (localStorage.getItem('last_u_year')) document.getElementById('u-year').value = localStorage.getItem('last_u_year');
     if (localStorage.getItem('last_u_act')) document.getElementById('u-act').value = localStorage.getItem('last_u_act');
 
@@ -31,17 +32,19 @@ async function login() {
 
     const userId = document.getElementById('u-id').value;
     const password = document.getElementById('u-pass').value;
+    const branchNo = document.getElementById('u-brn').value;
     const year = document.getElementById('u-year').value;
     const act = document.getElementById('u-act').value;
 
-    if (!userId || !password || !year || !act) {
-        errorDiv.innerText = 'يرجى تعبئة جميع الحقول (رقم المستخدم، الباسوورد، السنة، النشاط)';
+    if (!userId || !password || !branchNo || !year || !act) {
+        errorDiv.innerText = 'يرجى تعبئة جميع الحقول (رقم المستخدم، الباسوورد، رقم الفرع، السنة، النشاط)';
         return;
     }
 
     const dto = {
         userId: parseInt(userId),
         password: password,
+        branchNo: parseInt(branchNo),
         financialYear: parseInt(year),
         activityNo: parseInt(act),
         deviceId: getDeviceSerial()
@@ -82,6 +85,7 @@ async function login() {
         saveToken(data.token);
 
         localStorage.setItem('last_u_id', dto.userId);
+        localStorage.setItem('last_u_brn', dto.branchNo);
         localStorage.setItem('last_u_year', dto.financialYear);
         localStorage.setItem('last_u_act', dto.activityNo);
 
@@ -92,6 +96,7 @@ async function login() {
 
         // Offline Fallback for Login
         if (localStorage.getItem('last_u_id') === userId &&
+            localStorage.getItem('last_u_brn') === branchNo &&
             localStorage.getItem('last_u_year') === year &&
             localStorage.getItem('last_u_act') === act &&
             localStorage.getItem('offline_token')) {

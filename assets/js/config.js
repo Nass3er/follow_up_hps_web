@@ -79,6 +79,31 @@ function getToken() {
     return localStorage.getItem('auth_token');
 }
 
+function getAuthData() {
+    const token = getToken();
+    if (!token) return null;
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+}
+
+function getUserBranch() {
+    const data = getAuthData();
+    return data ? parseInt(data.BranchNo) : null;
+}
+
+function isAdmin() {
+    const data = getAuthData();
+    return data && data.IsAdmin === "1";
+}
+
 function checkAuth() {
     if (!getToken()) {
         window.location.href = 'login.html';
