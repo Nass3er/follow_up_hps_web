@@ -1,3 +1,6 @@
+// doctor_orders.js
+window.openHistoryModal = openHistoryModal; // Explicitly attach to window to avoid "not defined" errors
+
 let CURRENT_ADMISSION = null;
 let CACHED_ITEMS = [];
 let CURRENT_ROW_TO_POPULATE = null;
@@ -5,6 +8,11 @@ let DETAIL_ROWS_COUNT = 0;
 let CURRENT_ORDER_SRL = null;
 let IS_EDIT_MODE = false;
 let CACHED_HISTORY = [];
+
+// Helper to safely set values on elements that might be missing from DOM
+const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
+const getInt = (id) => parseInt(getVal(id)) || 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
@@ -43,7 +51,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onProcedureTypeChanged();
     updateUIForState('INIT'); // عند تحميل الصفحة: زر الإضافة فعّال دائماً
+
+    // Auto-select patient if coming from patient-dashboard
+    const savedPatient = localStorage.getItem('selected_patient');
+    if (savedPatient) {
+        try {
+            const details = JSON.parse(savedPatient);
+            document.getElementById('branch-list').value = details.branchNo || "";
+            document.getElementById('adm-no-input').value = details.docNo;
+            selectAdmission(details.docNo, details.docSerial || details.docSrl);
+            updateUIForState('NEW'); // Prepare for a new order for this patient
+            localStorage.removeItem('selected_patient');
+        } catch (e) { console.error("Error loading saved patient", e); }
+    }
 });
+
+function goBack() {
+    if (CURRENT_ADMISSION) {
+        localStorage.setItem('selected_patient', JSON.stringify(CURRENT_ADMISSION));
+    }
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.location.href = 'index.html';
+    }
+}
 
 function updateUIForState(state) {
     const btnAdd = document.getElementById('btn-add');
@@ -261,9 +293,26 @@ async function loadOrder(docSrl) {
             document.getElementById('p-room').value = m.roomNo || '';
             document.getElementById('p-bed').value = m.bedNo || '';
             document.getElementById('p-dept').value = m.deptNo || '';
-            document.getElementById('p-gender').value = m.gender == 1 ? "ذكر" : "أنثى";
-            document.getElementById('p-age').value = m.age || '';
-            document.getElementById('p-adm-date').value = m.admDate || '';
+            setVal('p-gender', m.gender == 1 ? "ذكر" : "أنثى");
+            setVal('p-age', m.age || '');
+            setVal('p-adm-date', m.admDate || '');
+
+            // Important: Populate CURRENT_ADMISSION so saveOrder works correctly for edits
+            CURRENT_ADMISSION = {
+                docNo: m.docNoAdmission,
+                docSrl: m.docSrlAdmission || 0,
+                patientNo: m.patientNo,
+                patientName: m.patientName,
+                roomNo: m.roomNo,
+                bedNo: m.bedNo,
+                deptNo: m.deptNo,
+                buldNo: m.buildNo,
+                roomService: m.roomSer,
+                gender: m.gender,
+                age: m.age,
+                ageType: m.ageType,
+                dctrNo: m.doctorNo
+            };
 
             document.getElementById('patient-info-section').style.display = 'block';
             document.getElementById('table-area').style.display = 'block';
@@ -361,8 +410,17 @@ function renderBranches(list) {
     const select = document.getElementById('branch-list');
     if (!select) return;
     select.innerHTML = '<option value="">اختر الفرع...</option>';
-    list.forEach(b => select.add(new Option(b.branchName, b.branchNo)));
-    if (list.length === 1) select.value = list[0].branchNo;
+    if (list) {
+        list.forEach(b => select.add(new Option(b.branchName, b.branchNo)));
+
+        // Auto-select the branch from localStorage
+        const savedBranch = localStorage.getItem('last_u_brn');
+        if (savedBranch) {
+            select.value = savedBranch;
+        } else if (list.length === 1) {
+            select.value = list[0].branchNo;
+        }
+    }
 }
 
 async function searchAdmission(docNo) {
@@ -472,16 +530,16 @@ async function selectAdmission(no, srl) {
 
         CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl };
 
-        document.getElementById('patient-no').value = details.patientNo;
-        document.getElementById('patient-name').value = details.patientName;
-        document.getElementById('doctor-no').value = details.dctrNo || details.doctorNo || '';
-        document.getElementById('doctor-name').value = details.doctorName || '';
-        document.getElementById('p-room').value = details.roomNo;
-        document.getElementById('p-bed').value = details.bedNo;
-        document.getElementById('p-dept').value = details.deptNo || '';
-        document.getElementById('p-gender').value = details.gender == 1 ? "ذكر" : "أنثى";
-        document.getElementById('p-age').value = details.age || '';
-        document.getElementById('p-adm-date').value = details.admDate ? new Date(details.admDate).toLocaleDateString() : '';
+        setVal('patient-no', details.patientNo);
+        setVal('patient-name', details.patientName);
+        setVal('doctor-no', details.dctrNo || details.doctorNo || '');
+        setVal('doctor-name', details.doctorName || '');
+        setVal('p-room', details.roomNo);
+        setVal('p-bed', details.bedNo);
+        setVal('p-dept', details.deptNo || '');
+        setVal('p-gender', details.gender == 1 ? "ذكر" : "أنثى");
+        setVal('p-age', details.age || '');
+        setVal('p-adm-date', details.admDate ? new Date(details.admDate).toLocaleDateString() : '');
 
         document.getElementById('patient-info-section').style.display = 'block';
 
@@ -783,8 +841,8 @@ async function saveOrder() {
         return;
     }
 
-    let ageVal = document.getElementById('p-age').value;
-    let genderVal = document.getElementById('p-gender').value === "ذكر" ? 1 : 2;
+    let ageVal = getVal('p-age');
+    let genderVal = getVal('p-gender') === "ذكر" ? 1 : 2;
 
     if (CURRENT_ADMISSION) {
         ageVal = CURRENT_ADMISSION.age || ageVal;
@@ -792,16 +850,16 @@ async function saveOrder() {
     }
 
     const dto = {
-        branchNo: parseInt(document.getElementById('branch-list').value),
+        branchNo: getInt('branch-list'),
         procedureType: procedureType,
-        docNo: parseInt(document.getElementById('doc-no').value) || 1,
-        docDate: document.getElementById('doc-date').value,
-        docTime: `2000-01-01T${document.getElementById('doc-time').value}`,
-        priorityNo: parseInt(document.getElementById('prorty-no').value) || 1,
+        docNo: getInt('doc-no') || 1,
+        docDate: getVal('doc-date'),
+        docTime: `2000-01-01T${getVal('doc-time')}`,
+        priorityNo: getInt('prorty-no') || 1,
 
-        docNoAdmission: parseInt(document.getElementById('adm-no-input').value) || 0,
-        docSrlAdmission: CURRENT_ADMISSION ? parseInt(CURRENT_ADMISSION.docSrl) : 0,
-        patientNo: document.getElementById('patient-no').value,
+        docNoAdmission: getInt('adm-no-input'),
+        docSrlAdmission: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.docSrl) || 0) : 0,
+        patientNo: getVal('patient-no'),
         roomSer: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomService) || 0) : 0,
         roomNo: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomNo) || 0) : 0,
         deptNo: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.deptNo) || 0) : 0,
@@ -810,13 +868,18 @@ async function saveOrder() {
         gender: genderVal,
         age: ageVal,
         ageType: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.ageType) || 0) : 0,
-        doctorNo: document.getElementById('doctor-no').value,
+        doctorNo: getVal('doctor-no') || (CURRENT_ADMISSION ? CURRENT_ADMISSION.dctrNo : ""),
 
-        notes: document.getElementById('doc-dsc').value,
-        refNo: document.getElementById('ref-no').value,
+        notes: getVal('doc-dsc'),
+        refNo: getVal('ref-no'),
 
         details: []
     };
+
+    // If we are editing an existing record, include its serial in the body too
+    if (CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')) {
+        dto.docSrl = parseInt(CURRENT_ORDER_SRL);
+    }
 
     const allRows = document.querySelectorAll('#details-tbody tr');
     allRows.forEach(tr => {
@@ -842,10 +905,8 @@ async function saveOrder() {
     }
 
     try {
-        const method = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_') ? 'PUT' : 'POST';
-        const url = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')
-            ? `${getBaseApiUrl()}/DoctorOrder/${CURRENT_ORDER_SRL}`
-            : `${getBaseApiUrl()}/DoctorOrder`;
+        const method = 'POST';
+        const url = `${getBaseApiUrl()}/DoctorOrder`;
 
         if (!navigator.onLine) {
             if (CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_')) {
@@ -870,15 +931,18 @@ async function saveOrder() {
             appAlert(`✅ ${result.message}`, "success");
             addNewOrder();
         } else {
-            const errorData = await res.json();
-            appAlert(`❌ فشل الحفظ: ${errorData.message || 'حصل خطأ في الخادم'}`, "error");
+            let errorMsg = 'حصل خطأ في الخادم';
+            try {
+                const errorData = await res.json();
+                errorMsg = errorData.message || errorMsg;
+            } catch (je) { }
+            appAlert(`❌ فشل الحفظ: ${errorMsg}`, "error");
         }
     } catch (e) {
-        console.error("Save Order Error:", e);
-        const method = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_') ? 'PUT' : 'POST';
-        const url = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')
-            ? `${getBaseApiUrl()}/DoctorOrder/${CURRENT_ORDER_SRL}`
-            : `${getBaseApiUrl()}/DoctorOrder`;
+        console.error("Save Order Exception Details:", e);
+        console.error("Payload was:", dto);
+        const method = 'POST';
+        const url = `${getBaseApiUrl()}/DoctorOrder`;
 
         if (CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_')) {
             const localId = parseInt(CURRENT_ORDER_SRL.toString().replace('local_', ''));

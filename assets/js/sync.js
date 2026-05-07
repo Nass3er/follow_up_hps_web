@@ -146,8 +146,21 @@ async function performSyncAll() {
     for (let i = 0; i < total; i++) {
         let item = all[i];
         try {
-            const res = await fetch(item.url, {
-                method: item.method,
+            let fetchUrl = item.url;
+            let fetchMethod = item.method;
+
+            // Fix for servers that block PUT (Method Not Allowed 405)
+            // If it's a doctor order and was saved as PUT, convert to POST and use base URL
+            if (item.type === 'order' && fetchMethod === 'PUT') {
+                fetchMethod = 'POST';
+                // Remove the ID from the URL if it exists, use base /DoctorOrder
+                if (fetchUrl.includes('/DoctorOrder/')) {
+                    fetchUrl = fetchUrl.split('/DoctorOrder/')[0] + '/DoctorOrder';
+                }
+            }
+
+            const res = await fetch(fetchUrl, {
+                method: fetchMethod,
                 headers: getHeaders(),
                 body: JSON.stringify(item.dto)
             });

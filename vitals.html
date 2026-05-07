@@ -14,10 +14,10 @@
     <div class="app-layout">
         <nav class="top-nav">
             <div class="brand">
-                <h1>🩺 نظام متابعة المرضى (العلامات الحيوية)</h1>
+                <h1 style="font-size: 18px;">🩺 العلامات الحيوية</h1>
             </div>
             <div class="nav-actions">
-                <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">🏠 الرئيسية</a>
+                <a href="javascript:void(0)" onclick="goBack()" class="btn btn-secondary" style="text-decoration:none; font-size: 20px; padding: 5px 12px;">➡</a>
                 <div class="user-info">
                     <span id="cur-day"></span> - <span id="cur-date"></span>
                 </div>
@@ -25,33 +25,36 @@
         </nav>
 
         <main class="main-content">
-            <section class="card section-search">
-                <div class="grid-2">
-                    <div class="form-group">
+            <section class="card section-search" style="padding: 10px;">
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label style="font-weight: bold;">رقم الترقيد</label>
+                    <div class="input-with-btn">
+                        <input type="number" id="adm-no-input" class="mandatory-field"
+                            placeholder="أدخل رقم الترقيد">
+                        <button onclick="openAdmModal()" class="btn btn-primary"
+                            title="بحث">🔍</button>
+                    </div>
+                </div>
+
+                <details>
+                    <summary style="cursor: pointer; color: #7f8c8d; font-size: 13px;">⚙️ إعدادات البحث الإضافية (الفرع...)</summary>
+                    <div class="form-group" style="margin-top: 10px;">
                         <label>الفرع</label>
                         <select id="branch-list" class="mandatory-field"></select>
                     </div>
-                    <div class="form-group">
-                        <label>رقم الترقيد</label>
-                        <div class="input-with-btn">
-                            <input type="number" id="adm-no-input" class="mandatory-field"
-                                placeholder="أدخل رقم الترقيد (اضغط مفتاح Enter للبحث)">
-                            <button onclick="openAdmModal()" class="btn btn-primary"
-                                title="بحث في قائمة الترقيدات">🔍</button>
-                        </div>
-                    </div>
-                </div>
+                </details>
             </section>
 
-            <section class="card section-patient">
-                <h3 class="section-title">بيانات المريض</h3>
+            <section id="patient-info-section" class="card section-patient" style="display: none; padding: 10px;">
                 <div class="patient-grid">
-                    <div class="info-item"><label>المريض</label><input type="text" id="p-name" readonly></div>
+                    <div class="info-item" style="grid-column: 1 / -1; background: #e3f2fd;">
+                        <label>المريض</label>
+                        <input type="text" id="p-name" readonly style="color: #1565c0; font-size: 14px;">
+                    </div>
                     <div class="info-item"><label>الرقم</label><input type="text" id="p-no" readonly></div>
                     <div class="info-item"><label>العمر</label><input type="text" id="p-age" readonly></div>
                     <div class="info-item"><label>الغرفة</label><input type="text" id="p-room" readonly></div>
                     <div class="info-item"><label>السرير</label><input type="text" id="p-bed" readonly></div>
-                    <div class="info-item"><label>الجنس</label><input type="text" id="p-gender" readonly></div>
                 </div>
             </section>
 

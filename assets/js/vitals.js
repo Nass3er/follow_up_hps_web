@@ -42,7 +42,41 @@ document.addEventListener('DOMContentLoaded', () => {
             event.target.style.display = "none";
         }
     }
+
+    // Auto-select patient if coming from patient-dashboard
+    const savedPatient = localStorage.getItem('selected_patient');
+    if (savedPatient) {
+        try {
+            const details = JSON.parse(savedPatient);
+            CURRENT_ADMISSION = details;
+            document.getElementById('adm-no-input').value = details.docNo;
+            renderPatientDetails(details);
+
+            // Auto-load branches and nurses then show table
+            initData().then(() => {
+                // If branch is already in details, select it
+                if (details.branchNo) {
+                    const branchSelect = document.getElementById('branch-list');
+                    if (branchSelect) branchSelect.value = details.branchNo;
+                }
+            });
+            // Important: Clear it from localStorage so it doesn't persist to other pages 
+            // or stick around after the user leaves this page.
+            localStorage.removeItem('selected_patient');
+        } catch (e) { console.error("Error loading saved patient", e); }
+    }
 });
+
+function goBack() {
+    if (CURRENT_ADMISSION) {
+        localStorage.setItem('selected_patient', JSON.stringify(CURRENT_ADMISSION));
+    }
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.location.href = 'index.html';
+    }
+}
 
 async function initData() {
     loadBranches();
@@ -73,7 +107,17 @@ function renderBranches(list) {
     const select = document.getElementById('branch-list');
     if (!select) return;
     select.innerHTML = '<option value="">اختر الفرع...</option>';
-    if (list) list.forEach(b => select.add(new Option(b.branchName, b.branchNo)));
+    if (list) {
+        list.forEach(b => select.add(new Option(b.branchName, b.branchNo)));
+
+        // Auto-select the branch from localStorage
+        const savedBranch = localStorage.getItem('last_u_brn');
+        if (savedBranch) {
+            select.value = savedBranch;
+        } else if (list.length === 1) {
+            select.value = list[0].branchNo;
+        }
+    }
 }
 
 async function searchAdmission(docNo) {
@@ -133,8 +177,8 @@ function renderAdmissionsTable(list) {
 function filterAdmissions() {
     const term = document.getElementById('adm-search-input').value.toLowerCase();
     const list = window.CURRENT_ADM_LIST || [];
-    const filtered = list.filter(a => 
-        (a.patientName && a.patientName.toLowerCase().includes(term)) || 
+    const filtered = list.filter(a =>
+        (a.patientName && a.patientName.toLowerCase().includes(term)) ||
         (a.docNo && a.docNo.toString().includes(term))
     );
     const tbody = document.querySelector('#adm-list-table tbody');
@@ -174,13 +218,15 @@ async function selectAdmission(no, srl) {
 }
 
 function renderPatientDetails(details) {
-    document.getElementById('p-name').value = details.patientName || details.patientNo;
-    document.getElementById('p-no').value = details.patientNo;
-    document.getElementById('p-age').value = details.age;
-    document.getElementById('p-room').value = details.roomNo;
-    document.getElementById('p-bed').value = details.bedNo;
-    document.getElementById('p-gender').value = details.gender == 1 ? "ذكر" : "أنثى";
-    document.getElementById('table-area').style.display = 'none';
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setVal('p-name', details.patientName || details.patientNo);
+    setVal('p-no', details.patientNo);
+    setVal('p-age', details.age);
+    setVal('p-room', details.roomNo);
+    setVal('p-bed', details.bedNo);
+    setVal('p-gender', details.gender == 1 ? "ذكر" : "أنثى");
+    const tableArea = document.getElementById('table-area');
+    if (tableArea) tableArea.style.display = 'none';
 }
 
 async function loadAndShowTable() {

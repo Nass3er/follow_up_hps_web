@@ -63,10 +63,10 @@
     <div class="app-layout">
         <nav class="top-nav">
             <div class="brand">
-                <h1>🩺 نظام متابعة المرضى (أوامر الأطباء)</h1>
+                <h1 style="font-size: 18px;">📋 أوامر الأطباء</h1>
             </div>
             <div class="nav-actions">
-                <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">🏠 الرئيسية</a>
+                <a href="javascript:void(0)" onclick="goBack()" class="btn btn-secondary" style="text-decoration:none; font-size: 20px; padding: 5px 12px;">➡</a>
                 <div class="user-info">
                     <span id="cur-day"></span> - <span id="cur-date"></span>
                 </div>
@@ -82,111 +82,73 @@
             </div>
 
             <!-- قسم المعلومات الاساسية للامر (Master) -->
-            <section class="card section-search">
-                <h3 class="section-title">بيانات الأمر الأساسية (Master)</h3>
-                <div class="grid-2">
+            <section class="card section-search" style="padding: 10px;">
+                <div class="grid-2" style="margin-bottom: 10px;">
                     <div class="form-group">
-                        <label>الفرع</label>
-                        <select id="branch-list" class="mandatory-field"></select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>رقم الترقيد</label>
+                        <label style="font-weight: 700;">رقم الترقيد</label>
                         <div class="input-with-btn">
-                            <input type="number" id="adm-no-input" class="mandatory-field" placeholder="ادخل رقم الترقيد واضغط Enter">
-                            <button onclick="openAdmModal()" class="btn btn-primary"
-                                title="بحث في قائمة الترقيدات">🔍</button>
+                            <input type="number" id="adm-no-input" class="mandatory-field" placeholder="رقم الترقيد" style="height: 38px;">
+                            <button onclick="openAdmModal()" class="btn btn-primary" title="بحث" style="padding: 0 10px;">🔍</button>
                         </div>
                     </div>
-
                     <div class="form-group">
-                        <label>رقم الأمر</label>
-                        <input type="number" id="doc-no" value="1">
-                    </div>
-
-                    <div class="form-group">
-                        <label>تاريخ الأمر</label>
-                        <input type="date" id="doc-date">
-                    </div>
-
-                    <div class="form-group">
-                        <label>وقت الأمر</label>
-                        <input type="time" id="doc-time" value="00:00:00" step="1">
-                    </div>
-
-                    <div class="form-group">
-                        <label>نوع الأمر</label>
-                        <input type="text" id="typ-name" value="عام" readonly style="background-color: #eee;">
-                        <input type="hidden" id="typ-no" value="1">
-                    </div>
-
-                    <div class="form-group">
-                        <label>نوع المريض</label>
-                        <input type="text" id="ptnt-typ-name" value="مريض داخلي" readonly
-                            style="background-color: #eee;">
-                        <input type="hidden" id="ptnt-typ" value="1">
-                    </div>
-
-                    <div class="form-group">
-                        <label>نوع الإجراء الطبي</label>
-                        <select id="prcdr-typ" class="mandatory-field" onchange="onProcedureTypeChanged()">
-                            <option value="">-- اختر نوع الإجراء --</option>
+                        <label style="color: var(--primary); font-weight: 700;">نوع الإجراء الطبي</label>
+                        <select id="prcdr-typ" class="mandatory-field" onchange="onProcedureTypeChanged()" style="border: 2px solid var(--primary); height: 38px; padding: 5px 8px;">
+                            <option value="">-- اختر النوع --</option>
                             <option value="1">1- أدوية</option>
                             <option value="2">2- فحوصات</option>
                             <option value="3">3- أشعة</option>
                             <option value="4">4- عمليات</option>
-                            <option value="5">5- إجراءات أخرى</option>
+                            <option value="5">5- أخرى</option>
                         </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>الأولوية</label>
-                        <select id="prorty-no">
-                            <option value="1">1- عادي</option>
-                            <option value="2">2- مستعجل</option>
-                            <option value="3">3- حرجة</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>رقم المرجع (اختياري)</label>
-                        <input type="text" id="ref-no">
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>ملاحظة عامة (اختياري)</label>
-                        <textarea id="doc-dsc" rows="2"></textarea>
                     </div>
                 </div>
+
+                <details>
+                    <summary style="cursor: pointer; color: #7f8c8d; font-size: 13px;">⚙️ إعدادات الأمر الإضافية (رقم الأمر، التاريخ، الفرع...)</summary>
+                    <div class="grid-2" style="margin-top: 10px;">
+                        <div class="form-group">
+                            <label>الفرع</label>
+                            <select id="branch-list" class="mandatory-field"></select>
+                        </div>
+                        <div class="form-group"><label>رقم الأمر</label><input type="number" id="doc-no" value="1"></div>
+                        <div class="form-group"><label>تاريخ الأمر</label><input type="date" id="doc-date"></div>
+                        <div class="form-group"><label>وقت الأمر</label><input type="time" id="doc-time" value="00:00:00" step="1"></div>
+                        <div class="form-group">
+                            <label>الأولوية</label>
+                            <select id="prorty-no">
+                                <option value="1">1- عادي</option>
+                                <option value="2">2- مستعجل</option>
+                                <option value="3">3- حرجة</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>رقم المرجع (اختياري)</label>
+                            <input type="text" id="ref-no">
+                        </div>
+                        <div class="form-group full-width">
+                            <label>ملاحظة عامة</label>
+                            <textarea id="doc-dsc" rows="2"></textarea>
+                        </div>
+                        <input type="hidden" id="typ-no" value="1"><input type="hidden" id="ptnt-typ" value="1">
+                    </div>
+                </details>
             </section>
 
             <!-- تفاصيل بيانات الترقيد المحددة ستظهر هنا -->
-            <section id="patient-info-section" class="card section-patient" style="display: none;">
-                <h3 class="section-title">بيانات المريض والطبيب</h3>
-
+            <!-- تفاصيل بيانات الترقيد ستبقى مخفية تماماً كما طلب المستخدم -->
+            <section id="patient-info-section" style="display: none !important;">
                 <div class="patient-grid">
-                    <div class="info-item" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
-                        <label style="color: var(--primary); font-size: 13px; margin-bottom: 5px;">المريض</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="patient-no" readonly style="width: 80px; text-align: center; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
-                            <input type="text" id="patient-name" readonly style="flex: 1; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
-                        </div>
-                    </div>
-
-                    <div class="info-item" style="grid-column: 1 / -1; display: flex; flex-direction: column;">
-                        <label style="color: var(--primary); font-size: 13px; margin-bottom: 5px;">الطبيب</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="doctor-no" readonly style="width: 80px; text-align: center; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
-                            <input type="text" id="doctor-name" readonly style="flex: 1; border: 1px solid #ddd; background: #f9f9f9; border-radius: 5px;">
-                        </div>
-                    </div>
-                    <div class="info-item"><label>الغرفة</label><input type="text" id="p-room" readonly></div>
-                    <div class="info-item"><label>السرير</label><input type="text" id="p-bed" readonly></div>
-                    <div class="info-item"><label>القسم</label><input type="text" id="p-dept" readonly></div>
-                    <div class="info-item"><label>الجنس</label><input type="text" id="p-gender" readonly></div>
-                    <div class="info-item"><label>العمر</label><input type="text" id="p-age" readonly></div>
-                    <div class="info-item"><label>تاريخ الترقيد</label><input type="text" id="p-adm-date" readonly>
-                    </div>
+                    <input type="hidden" id="patient-no">
+                    <input type="hidden" id="patient-name">
+                    <input type="hidden" id="doctor-no">
+                    <input type="hidden" id="doctor-name">
+                    <input type="hidden" id="p-room">
+                    <input type="hidden" id="p-bed">
+                    <input type="hidden" id="p-dept">
+                    <input type="hidden" id="p-gender">
+                    <input type="hidden" id="p-age">
+                    <input type="hidden" id="p-adm-date">
                 </div>
             </section>
 
