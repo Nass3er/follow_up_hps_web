@@ -25,130 +25,113 @@
             background-color: #f0f4f8;
             font-family: 'Tajawal', sans-serif;
             margin: 0;
-            padding-bottom: 30px;
+            padding-bottom: 10px;
+            max-height: 100vh;
+            overflow: hidden;
         }
 
+        /* Container designed to fit viewport */
         .dashboard-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px 15px;
+            box-sizing: border-box;
         }
 
+        /* Slimmer, beautiful header */
         .header-section {
             background: var(--primary-gradient);
             color: white;
-            padding: 9px 20px;
-            border-bottom-left-radius: 30px;
-            border-bottom-right-radius: 30px;
-            box-shadow: 0 4px 20px rgba(21, 101, 192, 0.3);
-            margin-bottom: 30px;
-            text-align: center;
+            padding: 10px 15px;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+            box-shadow: 0 4px 20px rgba(21, 101, 192, 0.25);
+            margin-bottom: 10px;
             position: relative;
         }
 
         .header-title {
             margin: 0;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 700;
         }
 
-        .search-trigger {
-            background: white;
-            color: #1565c0;
-            border: none;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: -30px auto 0;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 10;
-        }
-
-        .search-trigger:hover {
-            transform: scale(1.1) rotate(5deg);
-        }
-
+        /* Very compact patient card */
         .patient-card {
             background: var(--glass-bg);
             border-radius: 20px;
-            padding: 25px;
+            padding: 12px 15px;
             box-shadow: var(--card-shadow);
-            margin-top: 3px;
+            margin-top: 5px;
             display: none;
-            animation: slideUp 0.5s ease-out;
+            animation: slideUp 0.4s ease-out;
+            border: 1px solid rgba(21, 101, 192, 0.08);
         }
 
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(15px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .patient-card h3 {
-            color: #1565c0;
-            margin-top: 0;
-            border-bottom: 2px solid #e3f2fd;
-            padding-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
+        /* Compact Info Grid */
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         .info-item {
             background: #f8fbff;
-            padding: 8px 12px;
-            border-radius: 10px;
+            padding: 6px 12px;
+            border-radius: 8px;
             border: 1px solid #e3f2fd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
         }
 
         .info-label {
-            display: block;
-            font-size: 12px;
+            font-size: 11px;
             color: #78909c;
-            margin-bottom: 4px;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         .info-value {
-            display: block;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
             color: #37474f;
-            white-space: nowrap;
+            text-align: left;
             overflow: hidden;
             text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
+        /* Grid layout for Action Buttons: 2 columns to save height */
         .action-buttons {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            margin-top: 30px;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
         }
 
         .action-btn {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            padding: 14px 20px;
+            justify-content: center;
+            padding: 10px 8px;
             border-radius: 12px;
             text-decoration: none;
             color: white;
             font-weight: 700;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-size: 12px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+            gap: 6px;
+            text-align: center;
         }
 
         .action-btn:active {
@@ -160,14 +143,19 @@
         .btn-order { background: var(--accent-gradient); }
 
         .btn-icon {
-            font-size: 20px;
-            background: rgba(255,255,255,0.2);
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            font-size: 18px;
+            background: rgba(255,255,255,0.25);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .action-btn:hover .btn-icon {
+            transform: scale(1.1);
         }
 
         /* Modal Styles */
@@ -196,6 +184,7 @@
             font-size: 16px;
             outline: none;
             transition: border-color 0.3s;
+            box-sizing: border-box;
         }
 
         .search-input:focus {
@@ -235,63 +224,71 @@
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
+            padding: 30px 20px;
             color: #78909c;
         }
 
         .empty-icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-            opacity: 0.5;
+            font-size: 50px;
+            margin-bottom: 15px;
+            opacity: 0.7;
         }
 
         @media (max-width: 600px) {
             .info-grid {
-                grid-template-columns: 1fr 1fr; /* Keep 2 columns even on mobile */
-                gap: 10px;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
             }
             .dashboard-container {
-                padding: 10px;
+                padding: 8px 10px;
             }
-            .header-title { font-size: 20px; }
-            .action-btn { padding: 15px 20px; font-size: 16px; }
+            .header-title { font-size: 18px; }
+            .action-btn { font-size: 11px; padding: 8px 5px; }
+            .btn-icon { width: 30px; height: 30px; font-size: 16px; }
+        }
+
+        @media (max-height: 500px) {
+            body {
+                overflow-y: auto;
+                max-height: none;
+            }
         }
     </style>
 </head>
 <body>
     <div class="app-layout">
-        <nav class="top-nav" style="background: transparent; position: absolute; width: 100%; box-shadow: none; z-index: 100;">
-            <div class="nav-actions" style="margin-left: auto; padding: 10px; display: flex; gap: 10px;">
-                <a href="index.html" class="btn" style="text-decoration:none; font-size: 20px; padding: 5px 10px; color: white;" title="الرجوع للرئيسية">➡</a>
-            </div>
-        </nav>
-
+        <!-- Curved premium header containing back button, title, and search trigger in one line -->
         <header class="header-section">
-            <h1 class="header-title">متابعة مريض</h1>
-            <p style="opacity: 0.8; margin-top: 5px;">ابحث عن مريض للبدء بمتابعة حالته</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <a href="index.html" style="text-decoration:none; font-size: 22px; color: white; display: inline-flex; align-items: center; transition: transform 0.2s;" title="الرجوع للرئيسية" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">➡</a>
+                <h1 class="header-title">متابعة مريض</h1>
+                <button onclick="openSearchModal()" style="background: rgba(255,255,255,0.25); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, transform 0.2s;" title="بحث عن مريض" onmouseover="this.style.background='rgba(255,255,255,0.35)'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'; this.style.transform='scale(1)'">🔍</button>
+            </div>
         </header>
 
-        <button class="search-trigger" onclick="openSearchModal()" id="btn-search-trigger">
-            🔍
-        </button>
-
         <main class="dashboard-container">
-            <div id="welcome-msg" class="empty-state">
+            <!-- Welcome screen shown when no patient is selected -->
+            <div id="welcome-msg" class="empty-state" style="margin-top: 30px;">
                 <div class="empty-icon">🏥</div>
-                <h2>أهلاً بك</h2>
-                <p>اضغط على أيقونة البحث في الأعلى لاختيار مريض من قائمة الترقيدات النشطة</p>
+                <h2 style="color: #1565c0; font-size: 20px; margin-bottom: 10px;">أهلاً بك في نظام المتابعة</h2>
+                <p style="color: #78909c; font-size: 14px; margin-bottom: 25px;">الرجاء اختيار مريض من قائمة الترقيدات النشطة للبدء بالمتابعة وإجراء المعاملات الطبية</p>
+                <button class="btn btn-primary" onclick="openSearchModal()" style="background: var(--primary-gradient); padding: 12px 30px; border-radius: 25px; border: none; color: white; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(21, 101, 192, 0.2); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                    🔍 اختيار مريض للبدء
+                </button>
             </div>
 
-            <!-- Patient Info Card -->
-            <div class="patient-card card" id="patient-card" style="display: none; padding: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #f1f8fe; padding-bottom: 10px;">
-                    <div style="display: flex; gap: 10px; align-items: center; flex: 1; overflow: hidden;">
-                        <div class="patient-icon" id="p-icon" style="width: 35px; height: 35px; font-size: 18px;">👨‍💼</div>
-                        <h2 id="display-p-name" style="margin:0; color:var(--primary); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</h2>
+            <!-- Patient Info Card & Navigation Actions -->
+            <div class="patient-card card" id="patient-card">
+                <!-- Compact Header of the card -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #f1f8fe; padding-bottom: 6px;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex: 1; overflow: hidden;">
+                        <div class="patient-icon" id="p-icon" style="font-size: 20px;">👨‍💼</div>
+                        <h2 id="display-p-name" style="margin:0; color:#1565c0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</h2>
                     </div>
-                    <button onclick="clearSelection()" class="btn" style="background:#fff1f0; color:#ff4d4f; font-size:12px; padding:4px 8px; border: 1px solid #ffa39e; margin-right: 10px;" title="إلغاء التحديد">❌</button>
+                    <button onclick="clearSelection()" class="btn" style="background:#fff1f0; color:#ff4d4f; font-size:11px; padding:3px 8px; border: 1px solid #ffa39e; border-radius: 6px; margin-right: 10px; cursor: pointer;" title="إلغاء التحديد">❌ إلغاء</button>
                 </div>
                 
+                <!-- Compact 2-column info grid where values are aligned side-by-side to save height -->
                 <div class="info-grid">
                     <div class="info-item">
                         <span class="info-label">رقم الترقيد</span>
@@ -311,25 +308,30 @@
                     </div>
                     <div class="info-item" style="grid-column: 1 / -1; background: #fffde7; border-color: #fff9c4;">
                         <span class="info-label">الطبيب المعالج</span>
-                        <span class="info-value" id="display-doctor">--</span>
+                        <span class="info-value" id="display-doctor" style="color: #f57f17;">--</span>
                     </div>
                 </div>
 
+                <!-- Action buttons rendered in a 2x2 grid with centered icon on top to minimize height and mimic a native app -->
                 <div class="action-buttons">
                     <a href="javascript:void(0)" onclick="navigateTo('vitals')" class="action-btn btn-vitals">
-                        <span>إضافة علامات حيوية</span>
                         <div class="btn-icon">🩺</div>
+                        <span>إضافة علامات حيوية</span>
                     </a>
                     <a href="javascript:void(0)" onclick="navigateTo('io')" class="action-btn btn-io">
-                        <span>إضافة سوائل (داخل/خارج)</span>
                         <div class="btn-icon">💧</div>
+                        <span>إضافة سوائل (داخل/خارج)</span>
                     </a>
                     <a href="javascript:void(0)" onclick="navigateTo('order')" class="action-btn btn-order">
-                        <span>إضافة أمر طبيب</span>
                         <div class="btn-icon">📋</div>
+                        <span>إضافة أمر طبيب</span>
+                    </a>
+                    <a href="javascript:void(0)" onclick="navigateTo('lab')" class="action-btn" style="background: linear-gradient(135deg, #673ab7 0%, #9575cd 100%);">
+                        <div class="btn-icon">🧪</div>
+                        <span>عرض نتائج العينات</span>
                     </a>
                 </div>
-            </section>
+            </div>
         </main>
     </div>
 
@@ -393,7 +395,7 @@
         async function loadAdmissions() {
             try {
                 let list = [];
-                if (navigator.onLine) {
+                try {
                     const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions`, {
                         method: 'POST',
                         headers: getHeaders()
@@ -401,8 +403,11 @@
                     if (res.ok) {
                         list = await res.json();
                         await saveToDB('admissions', list);
+                    } else {
+                        throw new Error("HTTP Status " + res.status);
                     }
-                } else {
+                } catch(netErr) {
+                    console.warn("Fetch admissions failed, falling back to local DB", netErr);
                     list = await getFromDB('admissions') || [];
                 }
                 ALL_ADMISSIONS = list;
@@ -454,7 +459,7 @@
             
             try {
                 let details = null;
-                if (navigator.onLine) {
+                try {
                     const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions/details?docNo=${adm.docNo}&docSrl=${adm.docSerial}`, {
                         method: 'POST',
                         headers: getHeaders()
@@ -464,9 +469,12 @@
                         const fullData = { ...details, docNo: adm.docNo, docSerial: adm.docSerial, cacheKey: `${adm.docNo}_${adm.docSerial}` };
                         await saveToDB('patients_details', [fullData], false);
                         details = fullData;
+                    } else {
+                        throw new Error("HTTP Status " + res.status);
                     }
-                } else {
-                    const cachedDetails = await getFromDB('patients_details');
+                } catch(netErr) {
+                    console.warn("Fetch patient details failed, falling back to local DB", netErr);
+                    const cachedDetails = await getFromDB('patients_details') || [];
                     details = cachedDetails.find(d => d.cacheKey === `${adm.docNo}_${adm.docSerial}`);
                 }
 
@@ -508,7 +516,8 @@
             const urls = {
                 'vitals': 'vitals.html',
                 'io': 'intake_output.html',
-                'order': 'doctor-orders.html'
+                'order': 'doctor-orders.html',
+                'lab': 'lab-results.html'
             };
             window.location.href = urls[page];
         }

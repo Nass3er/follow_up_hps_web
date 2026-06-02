@@ -12,15 +12,27 @@
 
 body {
     font-family: 'Tajawal', sans-serif;
-    background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 50%, #42a5f5 100%);
     direction: rtl;
     margin: 0;
-    padding: 0;
+    padding: 15px 10px;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
+    box-sizing: border-box;
     color: var(--text-color);
+}
+
+.form-row-three {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.form-row-three .form-group {
+    flex: 1;
+    margin-bottom: 0;
 }
 
 .login-wrapper {

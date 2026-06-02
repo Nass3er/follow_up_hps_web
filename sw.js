@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hps-app-v7';
+const CACHE_NAME = 'hps-app-v8';
 const urlsToCache = [
     './',
     './index.html',
@@ -8,6 +8,9 @@ const urlsToCache = [
     './login.html',
     './settings.html',
     './sync.html',
+    './lab-results.html',
+    './patient-dashboard.html',
+    './manifest.json',
     './assets/css/style.css',
     './assets/css/login.css',
     './assets/css/dashboard.css',

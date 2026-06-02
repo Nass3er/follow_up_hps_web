@@ -1,6 +1,6 @@
 // db.js - IndexedDB Helper for Offline First Architecture
 const DB_NAME = 'HPS_Offline_DB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let dbInstance = null;
 
@@ -26,6 +26,9 @@ function initDB() {
             if (!db.objectStoreNames.contains('doctor_orders_history')) db.createObjectStore('doctor_orders_history', { keyPath: 'cacheKey' });
             if (!db.objectStoreNames.contains('unsynced_doctor_orders')) db.createObjectStore('unsynced_doctor_orders', { keyPath: 'id', autoIncrement: true });
             if (!db.objectStoreNames.contains('items_cache')) db.createObjectStore('items_cache', { keyPath: 'cacheKey' });
+
+            // Lab Results Store
+            if (!db.objectStoreNames.contains('lab_results_history')) db.createObjectStore('lab_results_history', { keyPath: 'cacheKey' });
         };
         request.onsuccess = () => {
             dbInstance = request.result;

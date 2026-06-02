@@ -7,7 +7,7 @@ async function exportData() {
             'branches', 'admissions', 'nurses', 'vitals_history', 
             'patients_details', 'unsynced_vitals', 'io_history', 
             'unsynced_io', 'doctor_orders_history', 'unsynced_doctor_orders',
-            'items_cache'
+            'items_cache', 'lab_results_history'
         ];
         for (const store of stores) {
             data[store] = await getFromDB(store) || [];
@@ -51,7 +51,7 @@ async function importData(event) {
                 'branches', 'admissions', 'nurses', 'vitals_history', 
                 'patients_details', 'unsynced_vitals', 'io_history', 
                 'unsynced_io', 'doctor_orders_history', 'unsynced_doctor_orders',
-                'items_cache'
+                'items_cache', 'lab_results_history'
             ];
             for (const store of stores) {
                 if (data[store]) {
@@ -79,6 +79,7 @@ async function clearCache() {
         await saveToDB('io_history', [], true);
         await saveToDB('doctor_orders_history', [], true);
         await saveToDB('patients_details', [], true);
+        await saveToDB('lab_results_history', [], true);
 
         appAlert('✨ تم تنظيف الذاكرة المؤقتة بنجاح، التطبيق الآن أسرع وأخف!', 'success');
     } catch (e) {

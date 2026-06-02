@@ -61,17 +61,19 @@
                     <label>كلمة المرور</label>
                     <input type="password" id="u-pass" placeholder="أدخل كلمة المرور">
                 </div>
-                <div class="form-group">
-                    <label>رقم الفرع</label>
-                    <input type="number" id="u-brn" placeholder="أدخل رقم الفرع">
-                </div>
-                <div class="form-group">
-                    <label>السنة المالية</label>
-                    <input type="number" id="u-year" placeholder="أدخل السنة المالية">
-                </div>
-                <div class="form-group">
-                    <label>رقم النشاط</label>
-                    <input type="number" id="u-act" placeholder="أدخل رقم النشاط">
+                <div class="form-row-three">
+                    <div class="form-group">
+                        <label>الفرع</label>
+                        <input type="number" id="u-brn" placeholder="الفرع">
+                    </div>
+                    <div class="form-group">
+                        <label>السنة</label>
+                        <input type="number" id="u-year" placeholder="السنة">
+                    </div>
+                    <div class="form-group">
+                        <label>النشاط</label>
+                        <input type="number" id="u-act" placeholder="النشاط">
+                    </div>
                 </div>
                 <button id="login-btn" onclick="login()" class="btn btn-primary">تسجيل الدخول</button>
                 <div id="login-error" class="error-msg"></div>
