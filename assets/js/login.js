@@ -71,7 +71,14 @@ async function login() {
                 const errorData = await res.json();
                 window.appAlert(`⚠️ ${errorData.message || 'الترخيص منتهي!'}`, 'error');
             } else if (res.status === 401) {
-                errorDiv.innerText = '⚠️ بيانات الدخول غير صحيحة! تأكد من رقم المستخدم وكلمة المرور.';
+                let errMsg = '⚠️ بيانات الدخول غير صحيحة! تأكد من رقم المستخدم وكلمة المرور.';
+                try {
+                    const errorData = await res.json();
+                    if (errorData && errorData.message) {
+                        errMsg = `⚠️ ${errorData.message}`;
+                    }
+                } catch(e) {}
+                errorDiv.innerText = errMsg;
             } else if (res.status === 403) {
                 const errorData = await res.json();
                 window.appAlert(`${errorData.message} <br><br> <strong style="font-size:24px;color:#d35400;">${errorData.deviceId}</strong>`, 'warning');
