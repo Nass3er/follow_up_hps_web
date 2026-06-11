@@ -20,7 +20,7 @@
     <div class="app-layout">
         <nav class="top-nav">
             <div class="brand">
-                <h1>🏥 نظام متابعة المرضى (HPS)</h1>
+                <h1 id="company-name-title">🏥 نظام متابعة المرضى (HPS)</h1>
             </div>
             <div class="nav-actions">
                 <div class="user-info">
@@ -107,7 +107,35 @@
                 return;
             }
             document.getElementById('cur-dt').innerText = new Date().toLocaleDateString('ar-YE');
+            
+            // Load and display company name dynamically
+            fetchCompanyName();
         });
+
+        async function fetchCompanyName() {
+            const cachedName = localStorage.getItem('cached_company_name');
+            const titleElem = document.getElementById('company-name-title');
+            if (cachedName && titleElem) {
+                titleElem.innerText = cachedName;
+            }
+
+            try {
+                const apiUrl = getBaseApiUrl();
+                const res = await fetch(`${apiUrl}/company/name`, {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.companyName && titleElem) {
+                        titleElem.innerText = data.companyName;
+                        localStorage.setItem('cached_company_name', data.companyName);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch company name:', e);
+            }
+        }
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

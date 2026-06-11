@@ -64,8 +64,11 @@ body {
 
 .top-nav h1 {
     margin: 0;
-    font-size: 22px;
+    font-size: clamp(16px, 4.5vw, 22px);
     font-weight: 700;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
 }
 
 .nav-actions {
@@ -442,7 +445,10 @@ body {
     }
 
     .top-nav h1 {
-        font-size: 18px;
+        font-size: clamp(14px, 5vw, 18px);
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
     }
 
     .nav-actions {
