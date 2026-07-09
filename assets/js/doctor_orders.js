@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadBranches();
     loadProcedureTypes().then(() => {
+        loadUsageMethods();
         if (navigator.onLine) preloadAllItems();
     });
 
@@ -363,7 +364,12 @@ async function loadOrder(docSrl) {
                         <td><input type="number" id="row-price-${rowId}" value="${det.price || det.PRICE || 0}"></td>
                         <td><input type="text" id="row-unit-${rowId}" value="${det.unit || det.UNIT || ''}"></td>
                         <td><input type="number" id="row-qty-${rowId}" value="${det.quantity || det.I_QTY || 1}"></td>
-                        <td><input type="text" id="row-use-${rowId}" value="${det.useDesc || ''}"></td>
+                        <td>
+                            <div class="input-with-btn">
+                                <button class="mini-search-btn" onclick="openUsagesModal(${rowId})">🔍</button>
+                                <input type="text" id="row-use-${rowId}" value="${det.useDesc || ''}" data-mthduse="${det.mthdUse || ''}" oninput="this.removeAttribute('data-mthduse')">
+                            </div>
+                        </td>
                         <td><input type="text" id="row-duration-${rowId}" value="${det.duration || ''}"></td>
                         <td><button class="btn btn-secondary" onclick="removeDetailRow(${rowId})" style="padding:5px;">❌</button></td>
                     `;
@@ -461,6 +467,71 @@ function renderProcedureTypes(list) {
     if (curVal) {
         select.value = curVal;
     }
+}
+
+let CACHED_USAGES = [];
+window.openUsagesModal = openUsagesModal;
+window.filterUsages = filterUsages;
+
+async function loadUsageMethods() {
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/DoctorOrder/usage-methods`, {
+            method: 'GET',
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const list = await res.json();
+            localStorage.setItem('usage_methods', JSON.stringify(list));
+            CACHED_USAGES = list;
+        } else {
+            throw new Error('API Error');
+        }
+    } catch (e) {
+        console.warn('Offline: Loading usage methods from localStorage', e);
+        const stored = localStorage.getItem('usage_methods');
+        CACHED_USAGES = stored ? JSON.parse(stored) : [];
+    }
+}
+
+function openUsagesModal(rowId) {
+    CURRENT_ROW_TO_POPULATE = rowId;
+    document.getElementById('modal-usages').style.display = 'block';
+    renderUsagesFilter(CACHED_USAGES);
+}
+
+function filterUsages() {
+    const term = document.getElementById('usage-search-input').value.toLowerCase();
+    const filtered = CACHED_USAGES.filter(i =>
+        (i.codeNo && i.codeNo.toString().toLowerCase().includes(term)) ||
+        (i.codeName && i.codeName.toLowerCase().includes(term))
+    );
+    renderUsagesFilter(filtered);
+}
+
+function renderUsagesFilter(list) {
+    const tbody = document.getElementById('usages-tbody');
+    tbody.innerHTML = '';
+
+    const limit = list.slice(0, 100);
+    limit.forEach(i => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i.codeNo}</td><td>${i.codeName}</td>`;
+        tr.onclick = () => selectUsage(i);
+        tbody.appendChild(tr);
+    });
+}
+
+function selectUsage(usageData) {
+    if (!CURRENT_ROW_TO_POPULATE) return;
+    const rId = CURRENT_ROW_TO_POPULATE;
+
+    const useInput = document.getElementById(`row-use-${rId}`);
+    if (useInput) {
+        useInput.value = usageData.codeName || '';
+        useInput.dataset.mthduse = usageData.codeNo || '';
+    }
+
+    closeModal('modal-usages');
 }
 
 async function searchAdmission(docNo) {
@@ -722,7 +793,12 @@ function addNewDetailRow() {
             <td><input type="number" id="row-price-${rowId}"></td>
             <td><input type="text" id="row-unit-${rowId}"></td>
             <td><input type="number" id="row-qty-${rowId}" value="1"></td>
-            <td><input type="text" id="row-use-${rowId}"></td>
+            <td>
+                <div class="input-with-btn">
+                     <button class="mini-search-btn" onclick="openUsagesModal(${rowId})">🔍</button>
+                     <input type="text" id="row-use-${rowId}" oninput="this.removeAttribute('data-mthduse')">
+                </div>
+            </td>
             <td><input type="text" id="row-duration-${rowId}"></td>
             <td><button class="btn btn-secondary" onclick="removeDetailRow(${rowId})" style="padding:5px;">❌</button></td>
         `;
@@ -932,6 +1008,7 @@ async function saveOrder() {
         const codeElement = document.getElementById(`row-code-${id}`);
 
         if (codeElement && codeElement.value.trim() !== "") {
+            const useInput = document.getElementById(`row-use-${id}`);
             const detailItem = {
                 itemCode: codeElement.value,
                 pSize: codeElement.dataset.psize ? parseFloat(codeElement.dataset.psize) : 1,
@@ -939,7 +1016,9 @@ async function saveOrder() {
                 unit: document.getElementById(`row-unit-${id}`) ? document.getElementById(`row-unit-${id}`).value : "NA",
                 quantity: document.getElementById(`row-qty-${id}`) ? parseFloat(document.getElementById(`row-qty-${id}`).value) : 1,
                 expectedDate: document.getElementById(`row-date-${id}`) ? document.getElementById(`row-date-${id}`).value : new Date().toISOString().split('T')[0],
-                notes: document.getElementById(`row-note-${id}`) ? document.getElementById(`row-note-${id}`).value : ""
+                notes: document.getElementById(`row-note-${id}`) ? document.getElementById(`row-note-${id}`).value : "",
+                mthdUse: useInput && useInput.dataset.mthduse ? parseInt(useInput.dataset.mthduse) : null,
+                mthdUseDsc: useInput ? useInput.value : ""
             };
             dto.details.push(detailItem);
         }
@@ -950,15 +1029,18 @@ async function saveOrder() {
     }
 
     try {
+        const isEdit = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_');
         const method = 'POST';
-        const url = `${getBaseApiUrl()}/DoctorOrder`;
+        const url = isEdit
+            ? `${getBaseApiUrl()}/DoctorOrder/update/${CURRENT_ORDER_SRL}`
+            : `${getBaseApiUrl()}/DoctorOrder`;
 
         if (!navigator.onLine) {
             if (CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_')) {
                 const localId = parseInt(CURRENT_ORDER_SRL.toString().replace('local_', ''));
                 await updateUnsyncedDoctorOrder(localId, dto);
             } else {
-                await addUnsyncedDoctorOrder(url, method, dto, CURRENT_ORDER_SRL !== null);
+                await addUnsyncedDoctorOrder(url, method, dto, isEdit);
             }
             appAlert("⚠️ لا يتوفر اتصال بالإنترنت. تم حفظ الطلب محلياً في هاتفك وسيتم مزامنته عند توفر الشبكة.", 'warning');
             addNewOrder();
@@ -986,14 +1068,17 @@ async function saveOrder() {
     } catch (e) {
         console.error("Save Order Exception Details:", e);
         console.error("Payload was:", dto);
+        const isEdit = CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_');
         const method = 'POST';
-        const url = `${getBaseApiUrl()}/DoctorOrder`;
+        const url = isEdit
+            ? `${getBaseApiUrl()}/DoctorOrder/update/${CURRENT_ORDER_SRL}`
+            : `${getBaseApiUrl()}/DoctorOrder`;
 
         if (CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_')) {
             const localId = parseInt(CURRENT_ORDER_SRL.toString().replace('local_', ''));
             await updateUnsyncedDoctorOrder(localId, dto);
         } else {
-            await addUnsyncedDoctorOrder(url, method, dto, CURRENT_ORDER_SRL !== null);
+            await addUnsyncedDoctorOrder(url, method, dto, isEdit);
         }
         appAlert("⚠️ تم حفظ الطلب محلياً (تعذر الاتصال بالسيرفر)", 'warning');
         addNewOrder();

@@ -232,6 +232,35 @@
         </div>
     </div>
 
+    <!-- نافذة منبثقة للبحث في طرق الاستخدام -->
+    <div id="modal-usages" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>قائمة طرق الاستخدام</h3>
+                <span class="close-btn" onclick="closeModal('modal-usages')">&times;</span>
+            </div>
+            <div style="padding: 10px;">
+                <input type="text" id="usage-search-input" placeholder="ابحث بالرمز أو الوصف هنا..."
+                    style="width: 100%; border: 1px solid #ddd; padding: 10px; border-radius: 5px;"
+                    onkeyup="filterUsages()">
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table id="usages-list-table" class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>الرمز</th>
+                            <th>الوصف</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usages-tbody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal('modal-usages')" class="btn btn-secondary">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
     <!-- نافذة البحث في الأوامر السابقة -->
     <div id="modal-history" class="modal">
         <div class="modal-content modal-lg">
