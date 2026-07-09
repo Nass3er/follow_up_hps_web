@@ -34,7 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('doc-time')) document.getElementById('doc-time').value = `${hh}:${mm}:${ss}`;
 
     loadBranches();
-    if (navigator.onLine) preloadAllItems();
+    loadProcedureTypes().then(() => {
+        if (navigator.onLine) preloadAllItems();
+    });
 
     document.getElementById('adm-no-input')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
@@ -191,7 +193,7 @@ async function openHistoryModal() {
             docSrl: `local_${item.id}`,
             docNo: item.dto.docNo + ' (معلق)',
             docDate: item.dto.docDate,
-            procedureTypeName: item.dto.procedureType === 1 ? 'أدوية' : item.dto.procedureType === 2 ? 'فحوصات' : item.dto.procedureType === 3 ? 'أشعة' : 'إجراءات أخرى',
+            procedureTypeName: item.dto.procedureType === 1 ? 'أدوية' : item.dto.procedureType === 2 ? 'فحوصات' : item.dto.procedureType === 3 ? 'أشعة' : item.dto.procedureType === 4 ? 'عمليات' : item.dto.procedureType === 5 ? 'إجراءات أخرى' : item.dto.procedureType === 6 ? 'معاينة' : 'إجراءات أخرى',
             doctorName: item.dto.doctorNo,
             patientName: item.dto.patientNo || 'مريض غير معروف',
             isLocal: true
@@ -420,6 +422,44 @@ function renderBranches(list) {
         } else if (list.length === 1) {
             select.value = list[0].branchNo;
         }
+    }
+}
+
+async function loadProcedureTypes() {
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/DoctorOrder/procedure-types`, {
+            method: 'GET',
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const list = await res.json();
+            localStorage.setItem('procedure_types', JSON.stringify(list));
+            renderProcedureTypes(list);
+        } else {
+            throw new Error('API Error');
+        }
+    } catch (e) {
+        console.warn('Offline: Loading procedure types from localStorage', e);
+        const stored = localStorage.getItem('procedure_types');
+        const list = stored ? JSON.parse(stored) : [];
+        renderProcedureTypes(list);
+    }
+}
+
+function renderProcedureTypes(list) {
+    const select = document.getElementById('prcdr-typ');
+    if (!select) return;
+
+    const curVal = select.value;
+    select.innerHTML = '<option value="">-- اختر النوع --</option>';
+    if (list && list.length > 0) {
+        list.forEach(p => {
+            select.add(new Option(`${p.procedureType}- ${p.procedureTypeName}`, p.procedureType));
+        });
+    }
+
+    if (curVal) {
+        select.value = curVal;
     }
 }
 
@@ -758,7 +798,12 @@ async function openItemsModal(rowId) {
 
 async function preloadAllItems() {
     try {
-        const types = [1, 2, 3, 4, 5];
+        const stored = localStorage.getItem('procedure_types');
+        const list = stored ? JSON.parse(stored) : [];
+        let types = list.map(p => parseInt(p.procedureType)).filter(t => !isNaN(t));
+        if (types.length === 0) {
+            types = [1, 2, 3, 4, 5];
+        }
         for (const type of types) {
             const res = await fetch(`${getBaseApiUrl()}/DoctorOrder/items?procedureType=${type}`, {
                 method: 'GET', headers: getHeaders()
