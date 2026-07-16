@@ -123,7 +123,7 @@ function updateUIForState(state) {
         if (btnDelete) btnDelete.disabled = true;
         if (btnSave) btnSave.disabled = false;
         inputs.forEach(i => {
-            if (i.id !== 'adm-no-input' && i.id !== 'doc-no') {
+            if (i.id !== 'adm-no-input' && i.id !== 'doc-no' && i.id !== 'prcdr-typ') {
                 i.disabled = false;
             }
         });
@@ -370,7 +370,15 @@ async function loadOrder(docSrl) {
                                 <input type="text" id="row-use-${rowId}" value="${det.useDesc || ''}" data-mthduse="${det.mthdUse || ''}" oninput="this.removeAttribute('data-mthduse')">
                             </div>
                         </td>
-                        <td><input type="text" id="row-duration-${rowId}" value="${det.duration || ''}"></td>
+                        <td><input type="number" id="row-duration-${rowId}" value="${det.durtion || ''}" style="width:70px;"></td>
+                        <td>
+                            <select id="row-durtyp-${rowId}" style="width:80px;">
+                                <option value="">-- اختر --</option>
+                                <option value="1" ${det.durTyp == 1 ? 'selected' : ''}>يوم</option>
+                                <option value="2" ${det.durTyp == 2 ? 'selected' : ''}>شهر</option>
+                                <option value="3" ${det.durTyp == 3 ? 'selected' : ''}>سنة</option>
+                            </select>
+                        </td>
                         <td><button class="btn btn-secondary" onclick="removeDetailRow(${rowId})" style="padding:5px;">❌</button></td>
                     `;
                 } else {
@@ -719,7 +727,8 @@ function onProcedureTypeChanged() {
             <th>الوحدة</th>
             <th style="width:80px;">العدد</th>
             <th>طريقة الاستخدام</th>
-            <th>المدة</th>
+            <th style="width:80px;">المدة</th>
+            <th style="width:90px;">نوع المدة</th>
             <th style="width:50px;">🗑️</th>
         `;
     } else {
@@ -799,7 +808,15 @@ function addNewDetailRow() {
                      <input type="text" id="row-use-${rowId}" oninput="this.removeAttribute('data-mthduse')">
                 </div>
             </td>
-            <td><input type="text" id="row-duration-${rowId}"></td>
+            <td><input type="number" id="row-duration-${rowId}" style="width:70px;" placeholder="المدة"></td>
+            <td>
+                <select id="row-durtyp-${rowId}" style="width:80px;">
+                    <option value="">-- اختر --</option>
+                    <option value="1">يوم</option>
+                    <option value="2">شهر</option>
+                    <option value="3">سنة</option>
+                </select>
+            </td>
             <td><button class="btn btn-secondary" onclick="removeDetailRow(${rowId})" style="padding:5px;">❌</button></td>
         `;
     } else {
@@ -937,7 +954,17 @@ function selectItem(itemData) {
         if (document.getElementById(`row-price-${rId}`)) document.getElementById(`row-price-${rId}`).value = itemData.price || 0;
 
         if (document.getElementById(`row-unit-${rId}`)) {
-            document.getElementById(`row-unit-${rId}`).value = itemData.unit || itemData.sampleType || '';
+            const procedureTypeNow = parseInt(document.getElementById('prcdr-typ').value);
+            const unitEl = document.getElementById(`row-unit-${rId}`);
+            if (procedureTypeNow === 2) {
+                // عرض اسم العينة للمستخدم (sampleType)
+                unitEl.value = itemData.sampleType || '';
+                // الاحتفاظ بالقيمة الأصلية (LAB) في data attribute للحفظ لاحقاً
+                unitEl.dataset.saveUnit = itemData.unit || 'LAB';
+            } else {
+                unitEl.value = itemData.unit || '';
+                delete unitEl.dataset.saveUnit;
+            }
         }
     } catch (e) { }
 
@@ -1013,12 +1040,21 @@ async function saveOrder() {
                 itemCode: codeElement.value,
                 pSize: codeElement.dataset.psize ? parseFloat(codeElement.dataset.psize) : 1,
                 price: document.getElementById(`row-price-${id}`) ? parseFloat(document.getElementById(`row-price-${id}`).value) : 0,
-                unit: document.getElementById(`row-unit-${id}`) ? document.getElementById(`row-unit-${id}`).value : "NA",
+                // للفحوصات (2): يُحفظ القيمة الأصلية (LAB) من data-save-unit وليس ما يظهر للمستخدم
+                unit: (() => {
+                    const el = document.getElementById(`row-unit-${id}`);
+                    if (!el) return 'NA';
+                    return parseInt(procedureType) === 2
+                        ? (el.dataset.saveUnit || 'LAB')
+                        : (el.value || 'NA');
+                })(),
                 quantity: document.getElementById(`row-qty-${id}`) ? parseFloat(document.getElementById(`row-qty-${id}`).value) : 1,
                 expectedDate: document.getElementById(`row-date-${id}`) ? document.getElementById(`row-date-${id}`).value : new Date().toISOString().split('T')[0],
                 notes: document.getElementById(`row-note-${id}`) ? document.getElementById(`row-note-${id}`).value : "",
                 mthdUse: useInput && useInput.dataset.mthduse ? parseInt(useInput.dataset.mthduse) : null,
-                mthdUseDsc: useInput ? useInput.value : ""
+                mthdUseDsc: useInput ? useInput.value : "",
+                durtion: document.getElementById(`row-duration-${id}`) && document.getElementById(`row-duration-${id}`).value.trim() !== "" ? parseFloat(document.getElementById(`row-duration-${id}`).value) : null,
+                durTyp: document.getElementById(`row-durtyp-${id}`) && document.getElementById(`row-durtyp-${id}`).value !== "" ? parseInt(document.getElementById(`row-durtyp-${id}`).value) : null
             };
             dto.details.push(detailItem);
         }
