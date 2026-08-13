@@ -149,8 +149,13 @@ async function saveAndTestSettings() {
             });
         });
 
-        statusDiv.innerText = '✅ تم الحفظ. الاتصال بالسيرفر جاهز!';
-        statusDiv.classList.add('success');
+        if (res.status === 500) {
+            statusDiv.innerText = '❌ تم الاتصال بالسيرفر ولكن يوجد خطأ داخلي (500) في السيرفر أو قواعد البيانات!';
+            statusDiv.classList.add('error');
+        } else {
+            statusDiv.innerText = '✅ تم الحفظ. الاتصال بالسيرفر جاهز!';
+            statusDiv.classList.add('success');
+        }
     } catch (e) {
         statusDiv.innerText = '❌ تم الحفظ، لكن فشل الاتصال بالسيرفر. يرجى التأكد من البيانات أو تشغيل السيرفر.';
         statusDiv.classList.add('error');
