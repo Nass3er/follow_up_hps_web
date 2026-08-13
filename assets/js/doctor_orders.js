@@ -86,6 +86,7 @@ function updateUIForState(state) {
     const btnDelete = document.getElementById('btn-delete');
     const btnSave = document.getElementById('btn-save');
     const inputs = document.querySelectorAll('.main-content input, .main-content select, .main-content textarea');
+    const innerButtons = document.querySelectorAll('.main-content button:not(#btn-add):not(#btn-edit):not(#btn-delete):not(#btn-search-orders):not(#btn-save)');
 
     if (state === 'INIT') {
         // الحالة الابتدائية: زر الإضافة فعّال، باقي أزرار العمل معطّلة
@@ -96,6 +97,7 @@ function updateUIForState(state) {
         if (btnDelete) btnDelete.disabled = true;
         if (btnSave) btnSave.disabled = true;
         inputs.forEach(i => i.disabled = true);
+        innerButtons.forEach(b => b.disabled = true);
     } else if (state === 'NEW') {
         // المستخدم ضغط على إضافة: زر الإضافة يصبح باهتاً
         IS_EDIT_MODE = false;
@@ -109,6 +111,7 @@ function updateUIForState(state) {
                 i.disabled = false;
             }
         });
+        innerButtons.forEach(b => b.disabled = false);
     } else if (state === 'VIEW') {
         IS_EDIT_MODE = false;
         if (btnAdd) btnAdd.disabled = false;
@@ -116,6 +119,7 @@ function updateUIForState(state) {
         if (btnDelete) btnDelete.disabled = false;
         if (btnSave) btnSave.disabled = true;
         inputs.forEach(i => i.disabled = true);
+        innerButtons.forEach(b => b.disabled = true);
     } else if (state === 'EDIT') {
         IS_EDIT_MODE = true;
         if (btnAdd) btnAdd.disabled = true;
@@ -127,6 +131,10 @@ function updateUIForState(state) {
                 i.disabled = false;
             }
         });
+        innerButtons.forEach(b => b.disabled = false);
+        // زر البحث عن الترقيد يتم تعطيله لأن رقم الترقيد غير قابل للتعديل
+        const admSearchBtn = document.querySelector('.section-search button');
+        if (admSearchBtn) admSearchBtn.disabled = true;
     }
 }
 
