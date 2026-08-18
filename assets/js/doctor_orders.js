@@ -852,7 +852,14 @@ function removeDetailRow(rowId) {
 
 async function openItemsModal(rowId) {
     CURRENT_ROW_TO_POPULATE = rowId;
-    const procedureType = parseInt(document.getElementById('prcdr-typ').value);
+    const prcdrSelect = document.getElementById('prcdr-typ');
+    const procedureType = parseInt(prcdrSelect ? prcdrSelect.value : '');
+
+    if (!procedureType || isNaN(procedureType)) {
+        appAlert("⚠️ يرجى اختيار (نوع الإجراء الطبي) من الترويسة أعلى الصفحة أولاً.", 'warning');
+        if (prcdrSelect) prcdrSelect.focus();
+        return;
+    }
 
     document.getElementById('modal-items-title').innerText = procedureType === 2 ? 'قائمة الفحوصات' : procedureType === 3 ? 'قائمة الأشعة' : 'قائمة الإجراءات';
 
@@ -864,30 +871,44 @@ async function openItemsModal(rowId) {
     }
 
     document.getElementById('modal-items').style.display = 'block';
+    document.getElementById('items-tbody').innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:#666;">⏳ جاري تحميل القائمة...</td></tr>`;
 
     try {
         let items = [];
-        try {
-            const res = await fetch(`${getBaseApiUrl()}/DoctorOrder/items?procedureType=${procedureType}`, {
-                method: 'GET',
-                headers: getHeaders()
-            });
+        let isOnlineSuccess = false;
 
-            if (res.ok) {
-                items = await res.json();
-                await saveToDB('items_cache', { items, cacheKey: `items_${procedureType}` }, false);
-            } else {
-                throw new Error("HTTP " + res.status);
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`${getBaseApiUrl()}/DoctorOrder/items?procedureType=${procedureType}`, {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+
+                if (res.ok) {
+                    items = await res.json();
+                    isOnlineSuccess = true;
+                    if (items && items.length > 0) {
+                        await saveToDB('items_cache', { items, cacheKey: `items_${procedureType}` }, false);
+                    }
+                } else {
+                    const errText = await res.text();
+                    console.error("API error fetching items:", res.status, errText);
+                }
+            } catch (e) {
+                console.warn("Fetch error, switching to local DB", e);
             }
-        } catch (e) {
-            console.warn("Offline: Fetching items from DB");
-            const cached = await getFromDB('items_cache', `items_${procedureType}`);
-            items = cached ? cached.items : [];
         }
 
-        CACHED_ITEMS = items;
+        if (!isOnlineSuccess || !items || items.length === 0) {
+            const cached = await getFromDB('items_cache', `items_${procedureType}`);
+            if (cached && cached.items && cached.items.length > 0) {
+                items = cached.items;
+            }
+        }
+
+        CACHED_ITEMS = items || [];
         if (CACHED_ITEMS.length === 0) {
-            document.getElementById('items-tbody').innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">⚠️ لا توجد بيانات محفوظة لهذا الإجراء. يرجى فتح هذه النائية لمرة واحدة أثناء توفر الإنترنت لتحميل القائمة.</td></tr>`;
+            document.getElementById('items-tbody').innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">⚠️ لا توجد بيانات مسجلة لهذا الإجراء حالياً.</td></tr>`;
             return;
         }
         renderItemsFilter(CACHED_ITEMS);

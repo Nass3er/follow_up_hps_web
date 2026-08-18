@@ -227,7 +227,7 @@ async function saveVitals() {
         docSrl: CURRENT_DOC_SRL, // null في الإضافة، قيمة في التعديل
         branchNo: parseInt(document.getElementById('branch-list').value),
         docNo: (document.getElementById('adm-no-input').value).toString(),
-        docSrlAdmt: parseInt(CURRENT_ADMISSION.docSrl),
+        docSrlAdmt: parseInt(CURRENT_ADMISSION?.docSrl || CURRENT_ADMISSION?.docSrlAdmt || CURRENT_ADMISSION?.docSerial || 0) || 0,
         patientNo: CURRENT_ADMISSION.patientNo,
         docTime: `2000-01-01T${SELECTED_TIME}`,
         
@@ -328,7 +328,7 @@ async function saveVitals() {
             docSrl: CURRENT_DOC_SRL,
             branchNo: parseInt(document.getElementById('branch-list').value),
             docNo: document.getElementById('adm-no-input').value.toString(),
-            docSrlAdmt: parseInt(CURRENT_ADMISSION.docSrl),
+            docSrlAdmt: parseInt(CURRENT_ADMISSION?.docSrl || CURRENT_ADMISSION?.docSrlAdmt || CURRENT_ADMISSION?.docSerial || 0) || 0,
             patientNo: CURRENT_ADMISSION.patientNo,
             docTime: `2000-01-01T${SELECTED_TIME}`,
             nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,

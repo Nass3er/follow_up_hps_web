@@ -292,7 +292,7 @@ async function saveVitals() {
             docSrl: CURRENT_DOC_SRL ? parseInt(CURRENT_DOC_SRL) : 0,
             branchNo: parseInt(document.getElementById('branch-list').value),
             docNo: document.getElementById('adm-no-input').value.toString(),
-            docSrlAdmt: parseInt(CURRENT_ADMISSION.docSrl),
+            docSrlAdmt: parseInt(CURRENT_ADMISSION?.docSrl || CURRENT_ADMISSION?.docSrlAdmt || CURRENT_ADMISSION?.docSerial || 0) || 0,
             patientNo: CURRENT_ADMISSION.patientNo,
             age: CURRENT_ADMISSION.age ? CURRENT_ADMISSION.age.toString() : "",
             ageType: parseInt(CURRENT_ADMISSION.ageType) || 0,

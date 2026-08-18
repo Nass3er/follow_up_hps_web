@@ -437,6 +437,11 @@ function openVitalsModal(time) {
 
 async function saveVitals() {
     let currentMethod = 'POST';
+    if (!CURRENT_ADMISSION) {
+        appAlert("⚠️ الرجاء اختيار مريض أولاً", 'warning');
+        return;
+    }
+
     let isUpdate = false;
     let dto = null;
     let url = '';
@@ -451,18 +456,26 @@ async function saveVitals() {
 
         currentMethod = 'POST';
 
+        const rawDocSrlAdmt = CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.doc_srl;
+        const docSrlAdmtVal = parseInt(rawDocSrlAdmt) || 0;
+
+        if (!docSrlAdmtVal) {
+            appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrlAdmt). الرجاء إعادة اختيار المريض.", 'error');
+            return;
+        }
+
         dto = {
-            docSrl: isUpdate ? parseInt(CURRENT_DOC_SRL) : 0,
-            branchNo: parseInt(document.getElementById('branch-list').value),
-            docNo: document.getElementById('adm-no-input').value.toString(),
-            docSrlAdmt: parseInt(CURRENT_ADMISSION.docSrl),
-            patientNo: CURRENT_ADMISSION.patientNo,
+            docSrl: isUpdate ? (parseInt(CURRENT_DOC_SRL) || 0) : 0,
+            branchNo: parseInt(document.getElementById('branch-list').value) || 0,
+            docNo: (document.getElementById('adm-no-input').value || CURRENT_ADMISSION.docNo || "").toString(),
+            docSrlAdmt: docSrlAdmtVal,
+            patientNo: CURRENT_ADMISSION.patientNo ? CURRENT_ADMISSION.patientNo.toString() : "",
             age: CURRENT_ADMISSION.age ? CURRENT_ADMISSION.age.toString() : "",
             ageType: parseInt(CURRENT_ADMISSION.ageType) || 0,
             roomNo: parseInt(CURRENT_ADMISSION.roomNo) || 0,
             bedNo: parseInt(CURRENT_ADMISSION.bedNo) || 0,
-            roomSer: parseInt(CURRENT_ADMISSION.roomService) || 0,
-            buildingNo: parseInt(CURRENT_ADMISSION.buldNo) || 0,
+            roomSer: parseInt(CURRENT_ADMISSION.roomService || CURRENT_ADMISSION.roomSer) || 0,
+            buildingNo: parseInt(CURRENT_ADMISSION.buldNo || CURRENT_ADMISSION.buildingNo) || 0,
             docTime: `2000-01-01T${SELECTED_TIME}`,
             nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,
             temperature: getValue('v-temp'),

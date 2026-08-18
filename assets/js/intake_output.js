@@ -418,21 +418,34 @@ function openNurseModal() {
 }
 
 async function saveIO() {
+    if (!CURRENT_ADMISSION) {
+        appAlert("⚠️ الرجاء اختيار مريض أولاً", 'warning');
+        return;
+    }
+
     const getValue = (id) => parseFloat(document.getElementById(id).value) || 0;
     const isUpdate = CURRENT_DOC_SRL !== null && !CURRENT_DOC_SRL.toString().startsWith('local_');
 
+    const rawDocSrlAdmt = CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.doc_srl;
+    const docSrlAdmtVal = parseInt(rawDocSrlAdmt) || 0;
+
+    if (!docSrlAdmtVal) {
+        appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrlAdmt). الرجاء إعادة اختيار المريض.", 'error');
+        return;
+    }
+
     const dto = {
-        docSrl: isUpdate ? parseInt(CURRENT_DOC_SRL) : 0,
-        branchNo: parseInt(document.getElementById('branch-list').value),
-        docNo: document.getElementById('adm-no-input').value.toString(),
-        docSrlAdmt: parseInt(CURRENT_ADMISSION.docSrl),
-        patientNo: CURRENT_ADMISSION.patientNo,
-        age: CURRENT_ADMISSION.age || "",
+        docSrl: isUpdate ? (parseInt(CURRENT_DOC_SRL) || 0) : 0,
+        branchNo: parseInt(document.getElementById('branch-list').value) || 0,
+        docNo: (document.getElementById('adm-no-input').value || CURRENT_ADMISSION.docNo || "").toString(),
+        docSrlAdmt: docSrlAdmtVal,
+        patientNo: CURRENT_ADMISSION.patientNo ? CURRENT_ADMISSION.patientNo.toString() : "",
+        age: CURRENT_ADMISSION.age ? CURRENT_ADMISSION.age.toString() : "",
         ageType: parseInt(CURRENT_ADMISSION.ageType) || 0,
         roomNo: parseInt(CURRENT_ADMISSION.roomNo) || 0,
         bedNo: parseInt(CURRENT_ADMISSION.bedNo) || 0,
-        roomSer: parseInt(CURRENT_ADMISSION.roomService) || 0,
-        buildingNo: parseInt(CURRENT_ADMISSION.buldNo) || 0,
+        roomSer: parseInt(CURRENT_ADMISSION.roomService || CURRENT_ADMISSION.roomSer) || 0,
+        buildingNo: parseInt(CURRENT_ADMISSION.buldNo || CURRENT_ADMISSION.buildingNo) || 0,
         docTime: `${document.getElementById('doc-date-input').value}T${SELECTED_TIME}`,
         nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,
         inIvf: getValue('in-ivf'), inOral: getValue('in-oral'), inNgt: getValue('in-ngt'), inBld: getValue('in-bld'), inOthr: getValue('in-othr'),
