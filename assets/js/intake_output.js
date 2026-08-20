@@ -62,6 +62,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const branchSelect = document.getElementById('branch-list');
                     if (branchSelect) branchSelect.value = details.branchNo;
                 }
+                return loadAndShowTable();
+            }).then(() => {
+                const pendingEdit = localStorage.getItem('edit_unsynced_io');
+                if (pendingEdit) {
+                    try {
+                        const ref = JSON.parse(pendingEdit);
+                        localStorage.removeItem('edit_unsynced_io');
+                        setTimeout(() => { openEditModal(ref.localSrl); }, 150);
+                    } catch (e) { }
+                }
             });
             // Important: Clear it from localStorage
             localStorage.removeItem('selected_patient');
@@ -476,6 +486,8 @@ async function saveIO() {
         return;
     }
 
+    const isActuallyLocal = CURRENT_DOC_SRL && CURRENT_DOC_SRL.toString().startsWith('local_');
+
     try {
         const res = await fetch(url, {
             method: 'POST',
@@ -483,8 +495,14 @@ async function saveIO() {
             body: JSON.stringify(dto)
         });
         if (res.ok) {
+            if (isActuallyLocal) {
+                const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+                await removeUnsyncedIO(localId);
+            }
             appAlert("تم الحفظ بنجاح", 'success');
             closeModal('modal-io');
+            CURRENT_DOC_SRL = null;
+            checkSyncStatus();
             loadAndShowTable();
         } else {
             const errJson = await res.json();
@@ -492,9 +510,16 @@ async function saveIO() {
         }
     } catch (e) {
         console.error("Save IO Error:", e);
-        await addUnsyncedIO(url, 'POST', dto, isUpdate);
+        if (isActuallyLocal) {
+            const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+            await updateUnsyncedIO(localId, dto);
+        } else {
+            await addUnsyncedIO(url, 'POST', dto, isUpdate);
+        }
         appAlert("تم الحفظ محلياً (خطأ شبكة)", 'warning');
         closeModal('modal-io');
+        CURRENT_DOC_SRL = null;
+        checkSyncStatus();
         loadAndShowTable();
     }
 }

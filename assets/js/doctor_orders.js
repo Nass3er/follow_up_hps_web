@@ -65,7 +65,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             document.getElementById('branch-list').value = details.branchNo || "";
             document.getElementById('adm-no-input').value = details.docNo;
-            selectAdmission(details.docNo, details.docSrl || details.docSerial);
+            selectAdmission(details.docNo, details.docSrl || details.docSerial).then(() => {
+                const pendingEdit = localStorage.getItem('edit_unsynced_order');
+                if (pendingEdit) {
+                    try {
+                        const ref = JSON.parse(pendingEdit);
+                        localStorage.removeItem('edit_unsynced_order');
+                        setTimeout(() => { loadOrder(ref.localSrl); }, 200);
+                    } catch (e) { }
+                }
+            });
             updateUIForState('NEW'); // Prepare for a new order for this patient
             localStorage.removeItem('selected_patient');
         } catch (e) { console.error("Error loading saved patient", e); }
@@ -1115,6 +1124,8 @@ async function saveOrder() {
             return;
         }
 
+        const isActuallyLocal = CURRENT_ORDER_SRL && CURRENT_ORDER_SRL.toString().startsWith('local_');
+
         const res = await fetch(url, {
             method: method,
             headers: getHeaders(),
@@ -1122,9 +1133,14 @@ async function saveOrder() {
         });
 
         if (res.ok) {
+            if (isActuallyLocal) {
+                const localId = parseInt(CURRENT_ORDER_SRL.toString().replace('local_', ''));
+                await removeUnsyncedDoctorOrder(localId);
+            }
             const result = await res.json();
             appAlert(`✅ ${result.message}`, "success");
             addNewOrder();
+            checkSyncStatus();
         } else {
             let errorMsg = 'حصل خطأ في الخادم';
             try {

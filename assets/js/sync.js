@@ -1,5 +1,6 @@
 // sync.js - Offline sync queue manager
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
     checkSyncStatus();
     window.addEventListener('online', checkSyncStatus);
     window.addEventListener('offline', checkSyncStatus);
@@ -45,14 +46,78 @@ async function checkSyncStatus() {
 function toggleSelectAllSync(headerChk) {
     const items = document.querySelectorAll('.sync-chk-item');
     items.forEach(chk => chk.checked = headerChk.checked);
+    updateReviewButtonState();
 }
 
 function updateSyncHeaderState() {
     const headerChk = document.getElementById('chk-select-all');
     const items = Array.from(document.querySelectorAll('.sync-chk-item'));
-    if (!headerChk || items.length === 0) return;
-    const allChecked = items.every(c => c.checked);
-    headerChk.checked = allChecked;
+    if (headerChk && items.length > 0) {
+        const allChecked = items.every(c => c.checked);
+        headerChk.checked = allChecked;
+    }
+    updateReviewButtonState();
+}
+
+function updateReviewButtonState() {
+    const btnReview = document.getElementById('btn-review-sync');
+    if (!btnReview) return;
+
+    const checkedItems = Array.from(document.querySelectorAll('.sync-chk-item:checked'));
+    if (checkedItems.length === 1) {
+        btnReview.style.display = 'inline-block';
+        btnReview.dataset.type = checkedItems[0].dataset.type;
+        btnReview.dataset.id = checkedItems[0].dataset.id;
+    } else {
+        btnReview.style.display = 'none';
+        delete btnReview.dataset.type;
+        delete btnReview.dataset.id;
+    }
+}
+
+async function reviewSelectedSyncItem() {
+    const btnReview = document.getElementById('btn-review-sync');
+    if (!btnReview || !btnReview.dataset.type || !btnReview.dataset.id) {
+        appAlert("⚠️ يرجى تحديد سجل واحد فقط لمراجعته وتعديله.", "warning");
+        return;
+    }
+
+    const type = btnReview.dataset.type;
+    const id = parseInt(btnReview.dataset.id);
+
+    const storeNames = {
+        'vitals': 'unsynced_vitals',
+        'io': 'unsynced_io',
+        'order': 'unsynced_doctor_orders'
+    };
+
+    const record = await getFromDB(storeNames[type], id);
+    if (!record || !record.dto) {
+        appAlert("⚠️ تعذر العثور على السجل في الذاكرة المحلية.", "error");
+        return;
+    }
+
+    // Save patient context so target screen opens patient details
+    const patientContext = {
+        ...record.dto,
+        docNo: record.dto.docNo || record.dto.docNoAdmission,
+        docSrl: record.dto.docSrlAdmt || record.dto.docSrlAdmission,
+        docSerial: record.dto.docSrlAdmt || record.dto.docSrlAdmission,
+        patientNo: record.dto.patientNo,
+        branchNo: record.dto.branchNo
+    };
+    localStorage.setItem('selected_patient', JSON.stringify(patientContext));
+
+    // Save pending edit context
+    localStorage.setItem(`edit_unsynced_${type}`, JSON.stringify({ localId: id, localSrl: `local_${id}` }));
+
+    const targetUrls = {
+        'vitals': 'vitals.html',
+        'io': 'intake_output.html',
+        'order': 'doctor-orders.html'
+    };
+
+    window.location.href = targetUrls[type];
 }
 
 async function loadUnsyncedTable() {
@@ -80,6 +145,7 @@ async function loadUnsyncedTable() {
         tableParent.style.display = 'none';
         btnSyncAll.style.display = 'none';
         noData.style.display = 'block';
+        updateReviewButtonState();
         return;
     }
 
@@ -119,6 +185,8 @@ async function loadUnsyncedTable() {
         `;
         tbody.appendChild(tr);
     });
+
+    updateReviewButtonState();
 }
 
 async function deleteSyncItem(type, id) {
@@ -173,6 +241,7 @@ async function performSyncAll() {
 
     let successCount = 0;
     let failCount = 0;
+    let lastFailReason = "";
     const total = itemsToSync.length;
 
     for (let i = 0; i < total; i++) {
@@ -203,10 +272,21 @@ async function performSyncAll() {
                 else await removeUnsyncedDoctorOrder(item.id);
                 successCount++;
             } else {
+                let errText = "";
+                try {
+                    const errJson = await res.json();
+                    errText = errJson.message || errJson.title || JSON.stringify(errJson);
+                } catch (e) {
+                    try { errText = await res.text(); } catch (e2) {}
+                }
+                console.error(`Sync error [${res.status}] for ${item.type} (ID ${item.id}):`, errText, item.dto);
                 failCount++;
+                lastFailReason = errText || `HTTP ${res.status}`;
             }
         } catch (e) {
+            console.error("Sync exception:", e);
             failCount++;
+            lastFailReason = e.message || "خطأ في الشبكة أو الاتصال بالسيرفر";
         }
 
         let percentage = Math.round(((i + 1) / total) * 100);
@@ -221,7 +301,7 @@ async function performSyncAll() {
 
         let msg = `✅ تمت مزامنة ${successCount} سجلات بنجاح!`;
         if (failCount > 0) {
-            msg += `\n❌ فشلت ${failCount} سجلات. تأكد من اتصال السيرفر.`;
+            msg += `\n❌ فشلت مزامنة ${failCount} سجلات.\nسبب الخطأ من السيرفر: ${lastFailReason}`;
             appAlert(msg, 'error');
         } else {
             appAlert(msg, 'success');

@@ -43,9 +43,13 @@
                 <div
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <h3 class="section-title" style="margin:0; font-size:16px;">📝 السجلات غير المزامنة</h3>
-                    <button onclick="performSyncAll()" class="btn btn-primary" id="btn-sync-all"
-                        style="font-size: 13px; padding: 6px 10px; display: none; white-space: nowrap;">🔄 بدء
-                        المزامنة</button>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button onclick="reviewSelectedSyncItem()" class="btn" id="btn-review-sync"
+                            style="font-size: 13px; padding: 6px 12px; display: none; white-space: nowrap; background: #2980b9; color: white; border-radius: 6px; border: none; cursor: pointer;">🔍 مراجعة وتعديل</button>
+                        <button onclick="performSyncAll()" class="btn btn-primary" id="btn-sync-all"
+                            style="font-size: 13px; padding: 6px 10px; display: none; white-space: nowrap;">🔄 بدء
+                            المزامنة</button>
+                    </div>
                 </div>
 
                 <div id="sync-progress-container" style="display: none; margin-bottom: 20px;">

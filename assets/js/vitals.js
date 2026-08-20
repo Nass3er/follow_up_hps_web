@@ -62,6 +62,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const branchSelect = document.getElementById('branch-list');
                     if (branchSelect) branchSelect.value = details.branchNo;
                 }
+                return loadAndShowTable();
+            }).then(() => {
+                const pendingEdit = localStorage.getItem('edit_unsynced_vitals');
+                if (pendingEdit) {
+                    try {
+                        const ref = JSON.parse(pendingEdit);
+                        localStorage.removeItem('edit_unsynced_vitals');
+                        setTimeout(() => { openEditModal(ref.localSrl); }, 150);
+                    } catch (e) { }
+                }
             });
             // Important: Clear it from localStorage so it doesn't persist to other pages 
             // or stick around after the user leaves this page.
@@ -522,9 +532,14 @@ async function saveVitals() {
         });
 
         if (res.ok) {
+            if (isActuallyLocal) {
+                const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+                await removeUnsyncedVital(localId);
+            }
             appAlert(isUpdate ? "✅ تم التعديل بنجاح" : "✅ تم الحفظ بنجاح", 'success');
             closeModal('modal-vitals');
             CURRENT_DOC_SRL = null;
+            checkSyncStatus();
             loadAndShowTable();
         } else {
             try {
