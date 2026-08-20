@@ -8,6 +8,23 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
+    <style>
+        .sync-chk-header {
+            width: 20px;
+            height: 20px;
+            accent-color: #e67e22; /* تمييز الهيدر بلون برتقالي/ذهبي مميز */
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        .sync-chk-item {
+            width: 18px;
+            height: 18px;
+            accent-color: #27ae60; /* تمييز حقول السجلات باللون الأخضر */
+            cursor: pointer;
+            vertical-align: middle;
+        }
+    </style>
 </head>
 
 <body>
@@ -48,6 +65,9 @@
                     <table id="unsynced-table" class="modern-table">
                         <thead>
                             <tr>
+                                <th style="width: 45px; text-align: center;">
+                                    <input type="checkbox" id="chk-select-all" class="sync-chk-header" onchange="toggleSelectAllSync(this)" title="تحديد الكل / إلغاء تحديد الكل">
+                                </th>
                                 <th>النوع</th>
                                 <th>تاريخ التسجيل</th>
                                 <th>وقت المتابعة</th>

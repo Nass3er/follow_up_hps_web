@@ -42,6 +42,19 @@ async function checkSyncStatus() {
 
 // ------ Functions specifically for sync.html UI ------- //
 
+function toggleSelectAllSync(headerChk) {
+    const items = document.querySelectorAll('.sync-chk-item');
+    items.forEach(chk => chk.checked = headerChk.checked);
+}
+
+function updateSyncHeaderState() {
+    const headerChk = document.getElementById('chk-select-all');
+    const items = Array.from(document.querySelectorAll('.sync-chk-item'));
+    if (!headerChk || items.length === 0) return;
+    const allChecked = items.every(c => c.checked);
+    headerChk.checked = allChecked;
+}
+
 async function loadUnsyncedTable() {
     const tbody = document.querySelector('#unsynced-table tbody');
     if (!tbody) return;
@@ -74,6 +87,9 @@ async function loadUnsyncedTable() {
     btnSyncAll.style.display = 'block';
     noData.style.display = 'none';
 
+    const headerChk = document.getElementById('chk-select-all');
+    if (headerChk) headerChk.checked = true;
+
     all.forEach(item => {
         const tr = document.createElement('tr');
         const d = new Date(item.timestamp).toLocaleString('ar-YE');
@@ -90,6 +106,9 @@ async function loadUnsyncedTable() {
         }
 
         tr.innerHTML = `
+            <td style="text-align: center;">
+                <input type="checkbox" class="sync-chk-item" data-type="${item.type}" data-id="${item.id}" checked onchange="updateSyncHeaderState()">
+            </td>
             <td><span class="badge ${item.type === 'vitals' ? 'badge-info' : item.type === 'io' ? 'badge-warning' : 'badge-success'}">${item.label}</span></td>
             <td>${d}</td>
             <td>${vTime}</td>
@@ -108,6 +127,7 @@ async function deleteSyncItem(type, id) {
         if (type === 'vitals') await removeUnsyncedVital(id);
         else if (type === 'io') await removeUnsyncedIO(id);
         else await removeUnsyncedDoctorOrder(id);
+        checkSyncStatus();
         loadUnsyncedTable();
     }
 }
@@ -115,6 +135,12 @@ async function deleteSyncItem(type, id) {
 async function performSyncAll() {
     if (!navigator.onLine) {
         appAlert("أنت غير متصل بالإنترنت حالياً! يرجى الاتصال بالشبكة للمزامنة.", 'warning');
+        return;
+    }
+
+    const selectedCheckboxes = Array.from(document.querySelectorAll('.sync-chk-item:checked'));
+    if (selectedCheckboxes.length === 0) {
+        appAlert("⚠️ لم يتم تحديد أي سجل لمزامنته! يرجى تحديد السجلات المراد رفعها.", 'warning');
         return;
     }
 
@@ -127,7 +153,13 @@ async function performSyncAll() {
         ...unsyncedOrders.map(o => ({ ...o, type: 'order' }))
     ];
 
-    if (all.length === 0) return;
+    const selectedKeys = new Set(selectedCheckboxes.map(c => `${c.dataset.type}_${c.dataset.id}`));
+    const itemsToSync = all.filter(item => selectedKeys.has(`${item.type}_${item.id}`));
+
+    if (itemsToSync.length === 0) {
+        appAlert("⚠️ لم يتم تحديد أي سجل لمزامنته!", 'warning');
+        return;
+    }
 
     const btn = document.getElementById('btn-sync-all');
     btn.disabled = true;
@@ -141,10 +173,10 @@ async function performSyncAll() {
 
     let successCount = 0;
     let failCount = 0;
-    const total = all.length;
+    const total = itemsToSync.length;
 
     for (let i = 0; i < total; i++) {
-        let item = all[i];
+        let item = itemsToSync[i];
         try {
             let fetchUrl = item.url;
             let fetchMethod = item.method;
@@ -195,6 +227,7 @@ async function performSyncAll() {
             appAlert(msg, 'success');
         }
 
+        checkSyncStatus();
         loadUnsyncedTable();
     }, 800);
 }

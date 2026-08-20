@@ -466,7 +466,7 @@
                     });
                     if (res.ok) {
                         details = await res.json();
-                        const fullData = { ...details, docNo: adm.docNo, docSerial: adm.docSerial, cacheKey: `${adm.docNo}_${adm.docSerial}` };
+                        const fullData = { ...details, docNo: adm.docNo, docSerial: adm.docSerial, docSrl: adm.docSerial, cacheKey: `${adm.docNo}_${adm.docSerial}` };
                         await saveToDB('patients_details', [fullData], false);
                         details = fullData;
                     } else {

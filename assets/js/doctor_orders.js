@@ -60,9 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedPatient) {
         try {
             const details = JSON.parse(savedPatient);
+            if (details && !details.docSrl) {
+                details.docSrl = details.docSerial || details.docSrlAdmt || details.doc_srl;
+            }
             document.getElementById('branch-list').value = details.branchNo || "";
             document.getElementById('adm-no-input').value = details.docNo;
-            selectAdmission(details.docNo, details.docSerial || details.docSrl);
+            selectAdmission(details.docNo, details.docSrl || details.docSerial);
             updateUIForState('NEW'); // Prepare for a new order for this patient
             localStorage.removeItem('selected_patient');
         } catch (e) { console.error("Error loading saved patient", e); }
@@ -655,7 +658,7 @@ async function selectAdmission(no, srl) {
 
         if (!details) throw new Error("لا توجد بيانات محفوظة لهذا الترقيد. يرجى فتحه مرة واحدة أثناء توفر الإنترنت.");
 
-        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl };
+        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl, docSerial: srl };
 
         setVal('patient-no', details.patientNo);
         setVal('patient-name', details.patientName);
@@ -1035,7 +1038,7 @@ async function saveOrder() {
         priorityNo: getInt('prorty-no') || 1,
 
         docNoAdmission: getInt('adm-no-input'),
-        docSrlAdmission: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.docSrl) || 0) : 0,
+        docSrlAdmission: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl) || 0) : 0,
         patientNo: getVal('patient-no'),
         roomSer: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomService) || 0) : 0,
         roomNo: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomNo) || 0) : 0,

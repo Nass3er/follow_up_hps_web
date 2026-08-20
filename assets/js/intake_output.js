@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedPatient) {
         try {
             const details = JSON.parse(savedPatient);
+            if (details && !details.docSrl) {
+                details.docSrl = details.docSerial || details.docSrlAdmt || details.doc_srl;
+            }
             CURRENT_ADMISSION = details;
             document.getElementById('adm-no-input').value = details.docNo;
             renderPatientDetails(details);
@@ -192,7 +195,7 @@ async function selectAdmission(no, srl) {
             headers: getHeaders()
         });
         const details = await res.json();
-        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl, cacheKey: `${no}_${srl}` };
+        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl, docSerial: srl, cacheKey: `${no}_${srl}` };
         await saveToDB('patients_details', [CURRENT_ADMISSION], false);
         renderPatientDetails(CURRENT_ADMISSION);
     } catch (e) {
@@ -220,9 +223,15 @@ function renderPatientDetails(details) {
 async function loadAndShowTable() {
     if (!CURRENT_ADMISSION) return appAlert("الرجاء اختيار مريض أولاً", 'warning');
 
+    const docSrl = CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl;
+    if (!docSrl) {
+        return appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrl). الرجاء إعادة اختيار المريض.", 'warning');
+    }
+    CURRENT_ADMISSION.docSrl = docSrl;
+
     const docDate = document.getElementById('doc-date-input').value; // Get the selected date (YYYY-MM-DD)
     const interval = parseInt(document.getElementById('time-interval').value) || 30;
-    const cacheString = `${CURRENT_ADMISSION.docSrl}_${docDate}`;
+    const cacheString = `${docSrl}_${docDate}`;
 
     const parseDate = (s) => {
         if (!s) return "";
@@ -241,7 +250,7 @@ async function loadAndShowTable() {
     let savedData = [];
     try {
         // Updated to pass date if backend supports it (similar to vitals.js)
-        const res = await fetch(`${getBaseApiUrl()}/IntakeOutput/${CURRENT_ADMISSION.docSrl}?docDate=${docDate}`, {
+        const res = await fetch(`${getBaseApiUrl()}/IntakeOutput/${docSrl}?docDate=${docDate}`, {
             method: 'GET',
             headers: getHeaders()
         });
@@ -272,7 +281,7 @@ async function loadAndShowTable() {
     const unsynced = await getFromDB('unsynced_io');
     if (unsynced) {
         const localItems = unsynced.filter(u =>
-            u.dto.docSrlAdmt == CURRENT_ADMISSION.docSrl &&
+            u.dto.docSrlAdmt == docSrl &&
             u.dto.docTime && u.dto.docTime.startsWith(docDate)
         ).map(u => ({
             docSrl: `local_${u.id}`,

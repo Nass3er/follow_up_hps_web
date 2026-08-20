@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedPatient) {
         try {
             const details = JSON.parse(savedPatient);
+            if (details && !details.docSrl) {
+                details.docSrl = details.docSerial || details.docSrlAdmt || details.doc_srl;
+            }
             CURRENT_ADMISSION = details;
             document.getElementById('adm-no-input').value = details.docNo;
             renderPatientDetails(details);
