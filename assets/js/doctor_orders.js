@@ -197,8 +197,16 @@ async function deleteOrder() {
 async function openHistoryModal() {
     try {
         let history = [];
+        let historyUrl = `${getBaseApiUrl()}/DoctorOrder/history`;
+        
+        // سيناريو 1: إذا كان هناك ترقيد محدد (من شاشة متابعة مريض أو مدخل)
+        const docSrlAdmt = CURRENT_ADMISSION ? (CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl) : null;
+        if (docSrlAdmt && parseInt(docSrlAdmt) > 0) {
+            historyUrl += `?docSrlAdmission=${docSrlAdmt}`;
+        }
+
         try {
-            const res = await fetch(`${getBaseApiUrl()}/DoctorOrder/history`, {
+            const res = await fetch(historyUrl, {
                 method: 'GET',
                 headers: getHeaders()
             });
@@ -210,7 +218,12 @@ async function openHistoryModal() {
         }
 
         const unsynced = await getFromDB('unsynced_doctor_orders') || [];
-        const localHistory = unsynced.map(item => ({
+        let localUnsynced = unsynced;
+        if (docSrlAdmt && parseInt(docSrlAdmt) > 0) {
+            localUnsynced = unsynced.filter(item => item.dto && (item.dto.docSrlAdmission == docSrlAdmt || item.dto.docSrlAdmt == docSrlAdmt));
+        }
+
+        const localHistory = localUnsynced.map(item => ({
             docSrl: `local_${item.id}`,
             docNo: item.dto.docNo + ' (معلق)',
             docDate: item.dto.docDate,
