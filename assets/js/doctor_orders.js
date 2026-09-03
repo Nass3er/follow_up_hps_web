@@ -293,11 +293,11 @@ async function loadOrder(docSrl) {
             }
         }
 
-        if (data) {
+        if (data && data.master) {
             const m = data.master;
             CURRENT_ORDER_SRL = docSrl;
 
-            document.getElementById('branch-list').value = m.branchNo;
+            document.getElementById('branch-list').value = m.branchNo || "";
             document.getElementById('adm-no-input').value = m.docNoAdmission;
             document.getElementById('doc-no').value = m.docNo;
             document.getElementById('doc-date').value = m.docDate;
