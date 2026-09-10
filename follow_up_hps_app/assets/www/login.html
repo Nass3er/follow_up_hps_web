@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام متابعة المرضى HPS</title>
+    <link rel="stylesheet" href="assets/css/login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+
+<body>
+    <div class="login-wrapper">
+        <div class="login-container">
+            <div class="login-header">
+                <h2>نظام متابعة المرضى (HPS)</h2>
+                <p>مرحباً بك، يرجى تسجيل الدخول للمتابعة</p>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('login-tab', event)">🔑 بيانات الدخول</button>
+                <button class="tab-btn" onclick="switchTab('settings-tab', event)">⚙️ إعدادات السيرفر</button>
+            </div>
+
+            <!-- صفحة تسجيل الدخول -->
+            <div id="login-tab" class="tab-content active">
+                <div class="device-info"
+                    style="background: #fdf2e9; padding: 6px; border-radius: 8px; margin-bottom: 12px; text-align: center; border: 1px dashed #e67e22;">
+                    <p style="margin: 0 0 4px 0; font-size: 13px; color: #7f8c8d;">رقم سيريال الجهاز</p>
+                    <div
+                        style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #fff; padding: 5px; border-radius: 6px; border: 1px solid #fbd2b3;">
+                        <strong id="display-device-serial"
+                            style="font-size: 14px; color: #d35400; user-select: all; letter-spacing: 1px;">جاري
+                            التحميل...</strong>
+                        <button type="button" id="copy-serial-btn" onclick="copySerial(this)"
+                            style="background: #e67e22; color: #fff; border: none; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-family: 'Tajawal', sans-serif; font-size: 12px; display: flex; align-items: center; gap: 5px; width: 70px; justify-content: center;">
+                            <span id="copy-status-icon" style="display: flex; align-items: center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="copy-svg">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </span>
+                            <span id="copy-status-text">نسخ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>رقم المستخدم</label>
+                    <input type="number" id="u-id" placeholder="أدخل رقم المستخدم">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" id="u-pass" placeholder="أدخل كلمة المرور">
+                </div>
+                <div class="form-row-three">
+                    <div class="form-group">
+                        <label>الفرع</label>
+                        <input type="number" id="u-brn" placeholder="الفرع">
+                    </div>
+                    <div class="form-group">
+                        <label>السنة</label>
+                        <input type="number" id="u-year" placeholder="السنة">
+                    </div>
+                    <div class="form-group">
+                        <label>النشاط</label>
+                        <input type="number" id="u-act" placeholder="النشاط">
+                    </div>
+                </div>
+                <button id="login-btn" onclick="login()" class="btn btn-primary">تسجيل الدخول</button>
+                <div id="login-error" class="error-msg"></div>
+            </div>
+
+            <!-- صفحة إعدادات السيرفر -->
+            <div id="settings-tab" class="tab-content">
+                <div class="form-group">
+                    <label>اسم أو أي بي الهوست</label>
+                    <input type="text" id="api-host" placeholder="مثال: localhost أو 192.168.1.10">
+                </div>
+                <div class="form-group">
+                    <label>البورت الخاص بالسيرفر</label>
+                    <input type="text" id="api-port" placeholder="مثال: 80">
+                </div>
+                <div class="form-group">
+                    <label>اسم الخدمة (Web Service)</label>
+                    <input type="text" id="api-service" placeholder="مثال: hps">
+                </div>
+                <div class="actions">
+                    <button onclick="saveAndTestSettings()" class="btn btn-success">حفظ واختبار الاتصال</button>
+                </div>
+                <div id="test-result" class="status-msg"></div>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/login.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered directly in HTML:', reg.scope))
+                    .catch(err => console.warn('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

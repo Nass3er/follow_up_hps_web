@@ -1,0 +1,540 @@
+// intake_output.js - Offline First Intake & Output Controller
+let NURSE_LIST = [];
+let CURRENT_ADMISSION = null;
+let SELECTED_TIME = "";
+let lastFetchedData = [];
+let CURRENT_DOC_SRL = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+
+    const now = new Date();
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    if (document.getElementById('cur-day')) document.getElementById('cur-day').innerText = days[now.getDay()];
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    if (document.getElementById('cur-date')) document.getElementById('cur-date').innerText = `${year}/${month}/${day}`;
+    if (document.getElementById('doc-date-input')) document.getElementById('doc-date-input').value = `${year}-${month}-${day}`;
+
+    initData();
+
+    document.getElementById('adm-no-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            searchAdmission(e.target.value);
+            e.preventDefault();
+        }
+    });
+
+    document.getElementById('n-id')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            const nurse = NURSE_LIST.find(n => n.empNo == e.target.value);
+            if (nurse) document.getElementById('n-name').value = nurse.empName;
+            else { alert("الممرض غير موجود"); document.getElementById('n-name').value = ""; }
+            e.preventDefault();
+        }
+    });
+
+    // Handle closing modal outside clicks
+    window.onclick = function (event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
+        }
+    }
+
+    // Auto-select patient if coming from patient-dashboard
+    const savedPatient = localStorage.getItem('selected_patient');
+    if (savedPatient) {
+        try {
+            const details = JSON.parse(savedPatient);
+            if (details && !details.docSrl) {
+                details.docSrl = details.docSerial || details.docSrlAdmt || details.doc_srl;
+            }
+            CURRENT_ADMISSION = details;
+            document.getElementById('adm-no-input').value = details.docNo;
+            renderPatientDetails(details);
+
+            // Auto-load branches and nurses
+            initData().then(() => {
+                // If branch is already in details, select it
+                if (details.branchNo) {
+                    const branchSelect = document.getElementById('branch-list');
+                    if (branchSelect) branchSelect.value = details.branchNo;
+                }
+                return loadAndShowTable();
+            }).then(() => {
+                const pendingEdit = localStorage.getItem('edit_unsynced_io');
+                if (pendingEdit) {
+                    try {
+                        const ref = JSON.parse(pendingEdit);
+                        localStorage.removeItem('edit_unsynced_io');
+                        setTimeout(() => { openEditModal(ref.localSrl); }, 150);
+                    } catch (e) { }
+                }
+            });
+            // Important: Clear it from localStorage
+            localStorage.removeItem('selected_patient');
+        } catch (e) { console.error("Error loading saved patient", e); }
+    }
+});
+
+function goBack() {
+    if (CURRENT_ADMISSION) {
+        localStorage.setItem('selected_patient', JSON.stringify(CURRENT_ADMISSION));
+    }
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.location.href = 'index.html';
+    }
+}
+
+async function initData() {
+    loadBranches();
+    fetchNurses();
+}
+
+async function loadBranches() {
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/VitalSigns/branches`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const list = await res.json();
+            await saveToDB('branches', list);
+            renderBranches(list);
+        }
+    } catch (e) {
+        const list = await getFromDB('branches');
+        renderBranches(list);
+    }
+}
+
+function renderBranches(list) {
+    const select = document.getElementById('branch-list');
+    if (!select) return;
+    select.innerHTML = '<option value="">اختر الفرع...</option>';
+    if (list) {
+        list.forEach(b => select.add(new Option(b.branchName, b.branchNo)));
+
+        // Auto-select the branch from localStorage
+        const savedBranch = localStorage.getItem('last_u_brn');
+        if (savedBranch) {
+            select.value = savedBranch;
+        } else if (list.length === 1) {
+            select.value = list[0].branchNo;
+        }
+    }
+}
+
+async function searchAdmission(docNo) {
+    if (!docNo) return;
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        const list = await res.json();
+        await saveToDB('admissions', list);
+        handleFoundAdmission(list, docNo);
+    } catch (e) {
+        const list = await getFromDB('admissions');
+        handleFoundAdmission(list, docNo);
+    }
+}
+
+function handleFoundAdmission(list, docNo) {
+    if (!list) { appAlert('خطأ في الاتصال ولا توجد بيانات مخزنة', 'error'); return; }
+    const admission = list.find(a => a.docNo == docNo);
+    if (admission) selectAdmission(admission.docNo, admission.docSerial);
+    else appAlert("رقم الترقيد غير موجود", 'error');
+}
+
+async function openAdmModal() {
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        const list = await res.json();
+        await saveToDB('admissions', list);
+        renderAdmissionsTable(list);
+    } catch (e) {
+        const list = await getFromDB('admissions');
+        if (list && list.length > 0) renderAdmissionsTable(list);
+    }
+}
+
+function renderAdmissionsTable(list) {
+    window.CURRENT_ADM_LIST = list;
+    const tbody = document.querySelector('#adm-list-table tbody');
+    tbody.innerHTML = '';
+    list.forEach(a => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${a.docNo}</td><td>${new Date(a.date).toLocaleDateString()}</td><td>${a.patientName}</td>`;
+        tr.onclick = () => { selectAdmission(a.docNo, a.docSerial); closeModal('modal-adm'); };
+        tbody.appendChild(tr);
+    });
+    document.getElementById('modal-adm').style.display = 'block';
+}
+
+function filterAdmissions() {
+    const term = document.getElementById('adm-search-input').value.toLowerCase();
+    const list = window.CURRENT_ADM_LIST || [];
+    const filtered = list.filter(a =>
+        (a.patientName && a.patientName.toLowerCase().includes(term)) ||
+        (a.docNo && a.docNo.toString().includes(term))
+    );
+    const tbody = document.querySelector('#adm-list-table tbody');
+    tbody.innerHTML = '';
+    filtered.forEach(a => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${a.docNo}</td><td>${new Date(a.date).toLocaleDateString()}</td><td>${a.patientName}</td>`;
+        tr.onclick = () => { selectAdmission(a.docNo, a.docSerial); closeModal('modal-adm'); };
+        tbody.appendChild(tr);
+    });
+}
+
+async function selectAdmission(no, srl) {
+    document.getElementById('adm-no-input').value = no;
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions/details?docNo=${no}&docSrl=${srl}`, {
+            method: 'POST',
+            headers: getHeaders()
+        });
+        const details = await res.json();
+        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl, docSerial: srl, cacheKey: `${no}_${srl}` };
+        await saveToDB('patients_details', [CURRENT_ADMISSION], false);
+        renderPatientDetails(CURRENT_ADMISSION);
+    } catch (e) {
+        const detailsList = await getFromDB('patients_details');
+        const details = detailsList.find(d => d.cacheKey === `${no}_${srl}`);
+        if (details) {
+            CURRENT_ADMISSION = details;
+            renderPatientDetails(CURRENT_ADMISSION);
+        }
+    }
+}
+
+function renderPatientDetails(details) {
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    setVal('p-name', details.patientName || details.patientNo);
+    setVal('p-no', details.patientNo);
+    setVal('p-age', details.age);
+    setVal('p-room', details.roomNo);
+    setVal('p-bed', details.bedNo);
+    setVal('p-gender', details.gender == 1 ? "ذكر" : "أنثى");
+    const tableArea = document.getElementById('table-area');
+    if (tableArea) tableArea.style.display = 'none';
+}
+
+async function loadAndShowTable() {
+    if (!CURRENT_ADMISSION) return appAlert("الرجاء اختيار مريض أولاً", 'warning');
+
+    const docSrl = CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl;
+    if (!docSrl) {
+        return appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrl). الرجاء إعادة اختيار المريض.", 'warning');
+    }
+    CURRENT_ADMISSION.docSrl = docSrl;
+
+    const docDate = document.getElementById('doc-date-input').value; // Get the selected date (YYYY-MM-DD)
+    const interval = parseInt(document.getElementById('time-interval').value) || 30;
+    const cacheString = `${docSrl}_${docDate}`;
+
+    const parseDate = (s) => {
+        if (!s) return "";
+        let clean = s.replace(/\//g, '-').split('T')[0].split(' ')[0];
+        let parts = clean.split('-');
+        if (parts.length < 3) return "";
+        if (parts[0].length === 4) { // YYYY-MM-DD
+            return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        } else if (parts[2].length === 4) { // DD-MM-YYYY
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        return clean;
+    };
+    const targetDate = parseDate(docDate);
+
+    let savedData = [];
+    try {
+        // Updated to pass date if backend supports it (similar to vitals.js)
+        const res = await fetch(`${getBaseApiUrl()}/IntakeOutput/${docSrl}?docDate=${docDate}`, {
+            method: 'GET',
+            headers: getHeaders()
+        });
+        if (res.ok) {
+            const rawData = await res.json();
+            // Normalize server records: filter by date strictly
+            savedData = rawData.filter(d => {
+                const date1 = parseDate(d.docTime);
+                const date2 = parseDate(d.docDate);
+                return date1 === targetDate || date2 === targetDate;
+            }).map(d => {
+                let t = d.docTime.includes('T') ? d.docTime.split('T')[1] : (d.docTime.includes(' ') ? d.docTime.split(' ')[1] : d.docTime);
+                t = t.split('.')[0]; // Remove milliseconds if any
+                return { ...d, docTime: t };
+            });
+            await saveToDB('io_history', [{ cacheKey: cacheString, data: savedData }], false);
+        } else {
+            const err = await res.json();
+            appAlert(`فشل تحميل البيانات: ${err.message || 'خطأ غير معروف'}`, 'error');
+        }
+    } catch (e) {
+        console.error("Fetch IO History Error:", e);
+        const record = await getFromDB('io_history', cacheString);
+        if (record && record.data) savedData = record.data;
+    }
+
+    // Inject unsynced
+    const unsynced = await getFromDB('unsynced_io');
+    if (unsynced) {
+        const localItems = unsynced.filter(u =>
+            u.dto.docSrlAdmt == docSrl &&
+            u.dto.docTime && u.dto.docTime.startsWith(docDate)
+        ).map(u => ({
+            docSrl: `local_${u.id}`,
+            docTime: u.dto.docTime.split('T')[1].split('.')[0],
+            nurseEmpNo: u.dto.nurseEmpNo,
+            inIvf: u.dto.inIvf, inOral: u.dto.inOral, inNgt: u.dto.inNgt, inBld: u.dto.inBld, inOthr: u.dto.inOthr,
+            outUrine: u.dto.outUrine, outGstrc: u.dto.outGstrc, outEmss: u.dto.outEmss, outDrng1: u.dto.outDrng1, outDrng2: u.dto.outDrng2, outOthr: u.dto.outOthr,
+            notes: u.dto.notes
+        }));
+
+        localItems.forEach(li => {
+            const existingIndex = savedData.findIndex(d => d.docTime === li.docTime);
+            if (existingIndex >= 0) savedData[existingIndex] = li;
+            else savedData.push(li);
+        });
+    }
+
+    lastFetchedData = savedData;
+
+
+
+    let totalDayIn = 0;
+    let totalDayOut = 0;
+
+    let timeSlots = [];
+    for (let totalMin = 1 * 60; totalMin < 24 * 60; totalMin += interval) {
+        let h = Math.floor(totalMin / 60);
+        let m = totalMin % 60;
+        timeSlots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`);
+    }
+    // Ensure any data from server not on intervals is shown
+    lastFetchedData.forEach(item => { if (item.docTime && !timeSlots.includes(item.docTime)) timeSlots.push(item.docTime); });
+    timeSlots.sort();
+
+    const tbody = document.querySelector('#io-table tbody');
+    tbody.innerHTML = '';
+    timeSlots.forEach(time => {
+        const record = lastFetchedData.find(d => d.docTime === time);
+        const tr = document.createElement('tr');
+        if (record) {
+            tr.className = "saved-row";
+            if (record.docSrl && record.docSrl.toString().startsWith('local_')) tr.style.borderRight = "5px solid #e67e22";
+
+            const rowSumIn = (record.inIvf || 0) + (record.inOral || 0) + (record.inNgt || 0) + (record.inBld || 0) + (record.inOthr || 0);
+            const rowSumOut = (record.outUrine || 0) + (record.outGstrc || 0) + (record.outEmss || 0) + (record.outDrng1 || 0) + (record.outDrng2 || 0) + (record.outOthr || 0);
+
+            totalDayIn += rowSumIn;
+            totalDayOut += rowSumOut;
+
+            tr.innerHTML = `
+                <td><b>${time}</b></td>
+                <td class="intake-cell">${record.inIvf || '-'}</td>
+                <td class="intake-cell">${record.inOral || '-'}</td>
+                <td class="intake-cell">${record.inNgt || '-'}</td>
+                <td class="intake-cell">${record.inBld || '-'}</td>
+                <td class="intake-cell">${record.inOthr || '-'}</td>
+                <td style="background:#d4e6f1; font-weight:bold;">${rowSumIn > 0 ? rowSumIn.toFixed(1) : '-'}</td>
+                <td class="output-cell">${record.outUrine || '-'}</td>
+                <td class="output-cell">${record.outGstrc || '-'}</td>
+                <td class="output-cell">${record.outDrng1 || '-'}</td>
+                <td class="output-cell">${record.outDrng2 || '-'}</td>
+                <td class="output-cell">${record.outOthr || '-'}</td>
+                <td style="background:#f5cba7; font-weight:bold;">${rowSumOut > 0 ? rowSumOut.toFixed(1) : '-'}</td>
+                <td>
+                    <div style="display: flex; gap: 2px;">
+                        <button class="btn-edit" onclick="openEditModal('${record.docSrl}')">✏️</button>
+                        <button class="btn-delete" style="background:#e74c3c; color:white;" onclick="deleteIO('${record.docSrl}')">🗑️</button>
+                    </div>
+                </td>
+            `;
+        } else {
+            tr.innerHTML = `<td>${time}</td>` + Array(12).fill('<td style="color:#aaa">-</td>').join('') +
+                `<td><button class="btn-add" onclick="openIOModal('${time}')">➕</button></td>`;
+        }
+        tbody.appendChild(tr);
+    });
+
+    // Update daily totals in header
+    document.getElementById('total-day-in').innerText = ` (إجمالي اليوم: ${totalDayIn.toFixed(1)})`;
+    document.getElementById('total-day-out').innerText = ` (إجمالي اليوم: ${totalDayOut.toFixed(1)})`;
+
+    document.getElementById('table-area').style.display = 'block';
+}
+
+function openIOModal(time) {
+    if (!CURRENT_ADMISSION) return appAlert("اختر مريضاً أولاً", 'warning');
+    if (!document.getElementById('branch-list').value) return appAlert("يرجى اختيار الفرع", 'warning');
+    CURRENT_DOC_SRL = null;
+    SELECTED_TIME = time;
+    document.getElementById('io-title').innerText = "سجل السوائل - الساعة " + time;
+    const ids = ['in-ivf', 'in-oral', 'in-ngt', 'in-bld', 'in-othr', 'out-urine', 'out-gstrc', 'out-drng1', 'out-drng2', 'out-emss', 'out-othr', 'n-id', 'n-name', 'io-notes'];
+    ids.forEach(id => document.getElementById(id).value = "");
+    document.getElementById('modal-io').style.display = 'block';
+}
+
+function openEditModal(docSrl) {
+    CURRENT_DOC_SRL = docSrl;
+    const record = lastFetchedData.find(d => d.docSrl == docSrl);
+    if (record) {
+        SELECTED_TIME = record.docTime;
+        document.getElementById('io-title').innerText = "تعديل سجل السوائل - الساعة " + SELECTED_TIME;
+        document.getElementById('in-ivf').value = record.inIvf || "";
+        document.getElementById('in-oral').value = record.inOral || "";
+        document.getElementById('in-ngt').value = record.inNgt || "";
+        document.getElementById('in-bld').value = record.inBld || "";
+        document.getElementById('in-othr').value = record.inOthr || "";
+        document.getElementById('out-urine').value = record.outUrine || "";
+        document.getElementById('out-gstrc').value = record.outGstrc || "";
+        document.getElementById('out-drng1').value = record.outDrng1 || "";
+        document.getElementById('out-drng2').value = record.outDrng2 || "";
+        document.getElementById('out-emss').value = record.outEmss || "";
+        document.getElementById('out-othr').value = record.outOthr || "";
+        document.getElementById('n-id').value = record.nurseEmpNo || "";
+        findNurseName(record.nurseEmpNo);
+        document.getElementById('io-notes').value = record.notes || "";
+        document.getElementById('modal-io').style.display = 'block';
+    }
+}
+
+async function fetchNurses() {
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/staff/nurses`, { method: 'POST', headers: getHeaders() });
+        if (res.ok) { NURSE_LIST = await res.json(); await saveToDB('nurses', NURSE_LIST); }
+    } catch (e) { NURSE_LIST = await getFromDB('nurses') || []; }
+}
+
+function findNurseName(empNo) {
+    if (!empNo) return;
+    const nurse = NURSE_LIST.find(n => n.empNo == empNo);
+    document.getElementById('n-name').value = nurse ? nurse.empName : "غير معروف";
+}
+
+function openNurseModal() {
+    const tbody = document.querySelector('#nurse-list-table tbody');
+    tbody.innerHTML = '';
+    NURSE_LIST.forEach(n => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${n.empNo}</td><td>${n.empName}</td>`;
+        tr.onclick = () => { document.getElementById('n-id').value = n.empNo; document.getElementById('n-name').value = n.empName; closeModal('modal-nurse'); };
+        tbody.appendChild(tr);
+    });
+    document.getElementById('modal-nurse').style.display = 'block';
+}
+
+async function saveIO() {
+    if (!CURRENT_ADMISSION) {
+        appAlert("⚠️ الرجاء اختيار مريض أولاً", 'warning');
+        return;
+    }
+
+    const getValue = (id) => parseFloat(document.getElementById(id).value) || 0;
+    const isUpdate = CURRENT_DOC_SRL !== null && !CURRENT_DOC_SRL.toString().startsWith('local_');
+
+    const rawDocSrlAdmt = CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.doc_srl;
+    const docSrlAdmtVal = parseInt(rawDocSrlAdmt) || 0;
+
+    if (!docSrlAdmtVal) {
+        appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrlAdmt). الرجاء إعادة اختيار المريض.", 'error');
+        return;
+    }
+
+    const dto = {
+        docSrl: isUpdate ? (parseInt(CURRENT_DOC_SRL) || 0) : 0,
+        branchNo: parseInt(document.getElementById('branch-list').value) || 0,
+        docNo: (document.getElementById('adm-no-input').value || CURRENT_ADMISSION.docNo || "").toString(),
+        docSrlAdmt: docSrlAdmtVal,
+        patientNo: CURRENT_ADMISSION.patientNo ? CURRENT_ADMISSION.patientNo.toString() : "",
+        age: CURRENT_ADMISSION.age ? CURRENT_ADMISSION.age.toString() : "",
+        ageType: parseInt(CURRENT_ADMISSION.ageType) || 0,
+        roomNo: parseInt(CURRENT_ADMISSION.roomNo) || 0,
+        bedNo: parseInt(CURRENT_ADMISSION.bedNo) || 0,
+        roomSer: parseInt(CURRENT_ADMISSION.roomService || CURRENT_ADMISSION.roomSer) || 0,
+        buildingNo: parseInt(CURRENT_ADMISSION.buldNo || CURRENT_ADMISSION.buildingNo) || 0,
+        docTime: `${document.getElementById('doc-date-input').value}T${SELECTED_TIME}`,
+        nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,
+        inIvf: getValue('in-ivf'), inOral: getValue('in-oral'), inNgt: getValue('in-ngt'), inBld: getValue('in-bld'), inOthr: getValue('in-othr'),
+        outUrine: getValue('out-urine'), outGstrc: getValue('out-gstrc'), outEmss: getValue('out-emss'), outDrng1: getValue('out-drng1'), outDrng2: getValue('out-drng2'), outOthr: getValue('out-othr'),
+        notes: document.getElementById('io-notes').value || ""
+    };
+
+    const url = isUpdate ? `${getBaseApiUrl()}/IntakeOutput/update` : `${getBaseApiUrl()}/IntakeOutput/add`;
+
+    if (!navigator.onLine) {
+        if (CURRENT_DOC_SRL && CURRENT_DOC_SRL.toString().startsWith('local_')) {
+            await updateUnsyncedIO(parseInt(CURRENT_DOC_SRL.replace('local_', '')), dto);
+        } else {
+            await addUnsyncedIO(url, 'POST', dto, isUpdate);
+        }
+        appAlert("تم الحفظ محلياً", 'warning');
+        closeModal('modal-io');
+        loadAndShowTable();
+        return;
+    }
+
+    const isActuallyLocal = CURRENT_DOC_SRL && CURRENT_DOC_SRL.toString().startsWith('local_');
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(dto)
+        });
+        if (res.ok) {
+            if (isActuallyLocal) {
+                const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+                await removeUnsyncedIO(localId);
+            }
+            appAlert("تم الحفظ بنجاح", 'success');
+            closeModal('modal-io');
+            CURRENT_DOC_SRL = null;
+            checkSyncStatus();
+            loadAndShowTable();
+        } else {
+            const errJson = await res.json();
+            appAlert(`فشل الحفظ: ${errJson.message || "خطأ غير معروف"}`, 'error');
+        }
+    } catch (e) {
+        console.error("Save IO Error:", e);
+        if (isActuallyLocal) {
+            const localId = parseInt(CURRENT_DOC_SRL.toString().replace('local_', ''));
+            await updateUnsyncedIO(localId, dto);
+        } else {
+            await addUnsyncedIO(url, 'POST', dto, isUpdate);
+        }
+        appAlert("تم الحفظ محلياً (خطأ شبكة)", 'warning');
+        closeModal('modal-io');
+        CURRENT_DOC_SRL = null;
+        checkSyncStatus();
+        loadAndShowTable();
+    }
+}
+
+async function deleteIO(docSrl) {
+    if (!confirm("هل أنت متأكد؟")) return;
+    if (docSrl.toString().startsWith('local_')) {
+        await removeUnsyncedIO(parseInt(docSrl.replace('local_', '')));
+        loadAndShowTable();
+        return;
+    }
+    try {
+        const res = await fetch(`${getBaseApiUrl()}/IntakeOutput/${docSrl}`, { method: 'DELETE', headers: getHeaders() });
+        if (res.ok) { appAlert("تم الحذف", 'success'); loadAndShowTable(); }
+    } catch (e) { appAlert("فشل الحذف (أوفلاين)", 'error'); }
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }

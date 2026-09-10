@@ -1,0 +1,54 @@
+name: follow_up_hps_app
+description: "نظام متابعة المرضى (HPS) - Flutter App"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.17.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  webview_flutter: ^3.0.4
+  path: 1.8.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/www/
+    - assets/www/assets/
+    - assets/www/assets/css/
+    - assets/www/assets/js/
+    - assets/www/icon.png
+    - assets/www/login.html
+    - assets/www/index.html
+    - assets/www/patient-dashboard.html
+    - assets/www/vitals.html
+    - assets/www/intake_output.html
+    - assets/www/doctor-orders.html
+    - assets/www/lab-results.html
+    - assets/www/settings.html
+    - assets/www/sync.html
+    - assets/www/sw.js
+    - assets/www/manifest.json
+    - assets/www/style.css
+    - assets/www/app.js
+    - assets/www/assets/css/dashboard.css
+    - assets/www/assets/css/login.css
+    - assets/www/assets/css/style.css
+    - assets/www/assets/js/app__.js
+    - assets/www/assets/js/config.js
+    - assets/www/assets/js/db.js
+    - assets/www/assets/js/doctor_orders.js
+    - assets/www/assets/js/intake_output.js
+    - assets/www/assets/js/login.js
+    - assets/www/assets/js/settings.js
+    - assets/www/assets/js/sync.js
+    - assets/www/assets/js/vitals.js

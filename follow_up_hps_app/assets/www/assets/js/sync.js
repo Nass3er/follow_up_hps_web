@@ -1,0 +1,313 @@
+// sync.js - Offline sync queue manager
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    checkSyncStatus();
+    window.addEventListener('online', checkSyncStatus);
+    window.addEventListener('offline', checkSyncStatus);
+});
+
+async function checkSyncStatus() {
+    try {
+        const unsyncedVitals = await getFromDB('unsynced_vitals') || [];
+        const unsyncedIO = await getFromDB('unsynced_io') || [];
+        const unsyncedOrders = await getFromDB('unsynced_doctor_orders') || [];
+        const totalUnsynced = unsyncedVitals.length + unsyncedIO.length + unsyncedOrders.length;
+
+        // Remove old floating badge if it exists
+        const oldBadge = document.getElementById('sync-badge-container');
+        if (oldBadge) oldBadge.remove();
+
+        // Update main dashboard card if on dashboard
+        let targetDashboardCard = document.getElementById('sync-dashboard-card');
+        if (targetDashboardCard) {
+            if (totalUnsynced > 0) {
+                targetDashboardCard.style.display = 'flex';
+                document.getElementById('sync-dashboard-text').innerText = `لديك ${totalUnsynced} سجل تحتاج إلى مزامنة في السيرفر`;
+            } else {
+                targetDashboardCard.style.display = 'none';
+            }
+        }
+
+        // ... rest of the status update icon logic
+        document.querySelectorAll('.app-layout h1, .brand h1, .dashboard-header h1').forEach(h1 => {
+            if (!navigator.onLine) {
+                if (!h1.innerHTML.includes('وضع عدم الاتصال')) {
+                    h1.innerHTML += ' <span style="font-size:12px;color:#e74c3c;background:#fff;border-radius:4px;padding:2px 5px;vertical-align:middle;margin-right:10px;">(وضع عدم الاتصال)</span>';
+                }
+            } else {
+                h1.innerHTML = h1.innerHTML.replace(/ <span.*?>\(وضع عدم الاتصال\)<\/span>/g, '');
+            }
+        });
+    } catch (e) { console.error("Sync check error", e); }
+}
+
+// ------ Functions specifically for sync.html UI ------- //
+
+function toggleSelectAllSync(headerChk) {
+    const items = document.querySelectorAll('.sync-chk-item');
+    items.forEach(chk => chk.checked = headerChk.checked);
+    updateReviewButtonState();
+}
+
+function updateSyncHeaderState() {
+    const headerChk = document.getElementById('chk-select-all');
+    const items = Array.from(document.querySelectorAll('.sync-chk-item'));
+    if (headerChk && items.length > 0) {
+        const allChecked = items.every(c => c.checked);
+        headerChk.checked = allChecked;
+    }
+    updateReviewButtonState();
+}
+
+function updateReviewButtonState() {
+    const btnReview = document.getElementById('btn-review-sync');
+    if (!btnReview) return;
+
+    const checkedItems = Array.from(document.querySelectorAll('.sync-chk-item:checked'));
+    if (checkedItems.length === 1) {
+        btnReview.style.display = 'inline-block';
+        btnReview.dataset.type = checkedItems[0].dataset.type;
+        btnReview.dataset.id = checkedItems[0].dataset.id;
+    } else {
+        btnReview.style.display = 'none';
+        delete btnReview.dataset.type;
+        delete btnReview.dataset.id;
+    }
+}
+
+async function reviewSelectedSyncItem() {
+    const btnReview = document.getElementById('btn-review-sync');
+    if (!btnReview || !btnReview.dataset.type || !btnReview.dataset.id) {
+        appAlert("⚠️ يرجى تحديد سجل واحد فقط لمراجعته وتعديله.", "warning");
+        return;
+    }
+
+    const type = btnReview.dataset.type;
+    const id = parseInt(btnReview.dataset.id);
+
+    const storeNames = {
+        'vitals': 'unsynced_vitals',
+        'io': 'unsynced_io',
+        'order': 'unsynced_doctor_orders'
+    };
+
+    const record = await getFromDB(storeNames[type], id);
+    if (!record || !record.dto) {
+        appAlert("⚠️ تعذر العثور على السجل في الذاكرة المحلية.", "error");
+        return;
+    }
+
+    // Save patient context so target screen opens patient details
+    const patientContext = {
+        ...record.dto,
+        docNo: record.dto.docNo || record.dto.docNoAdmission,
+        docSrl: record.dto.docSrlAdmt || record.dto.docSrlAdmission,
+        docSerial: record.dto.docSrlAdmt || record.dto.docSrlAdmission,
+        patientNo: record.dto.patientNo,
+        branchNo: record.dto.branchNo
+    };
+    localStorage.setItem('selected_patient', JSON.stringify(patientContext));
+
+    // Save pending edit context
+    localStorage.setItem(`edit_unsynced_${type}`, JSON.stringify({ localId: id, localSrl: `local_${id}` }));
+
+    const targetUrls = {
+        'vitals': 'vitals.html',
+        'io': 'intake_output.html',
+        'order': 'doctor-orders.html'
+    };
+
+    window.location.href = targetUrls[type];
+}
+
+async function loadUnsyncedTable() {
+    const tbody = document.querySelector('#unsynced-table tbody');
+    if (!tbody) return;
+
+    const unsyncedVitals = (await getFromDB('unsynced_vitals')) || [];
+    const unsyncedIO = (await getFromDB('unsynced_io')) || [];
+    const unsyncedOrders = (await getFromDB('unsynced_doctor_orders')) || [];
+
+    // Combine with tags
+    const all = [
+        ...unsyncedVitals.map(v => ({ ...v, type: 'vitals', label: 'علامات حيوية' })),
+        ...unsyncedIO.map(io => ({ ...io, type: 'io', label: 'سوائل' })),
+        ...unsyncedOrders.map(o => ({ ...o, type: 'order', label: 'أمر طبيب' }))
+    ].sort((a, b) => b.timestamp - a.timestamp);
+
+    const tableParent = document.getElementById('unsynced-table');
+    const noData = document.getElementById('no-sync-data');
+    const btnSyncAll = document.getElementById('btn-sync-all');
+
+    tbody.innerHTML = '';
+
+    if (all.length === 0) {
+        tableParent.style.display = 'none';
+        btnSyncAll.style.display = 'none';
+        noData.style.display = 'block';
+        updateReviewButtonState();
+        return;
+    }
+
+    tableParent.style.display = 'table';
+    btnSyncAll.style.display = 'block';
+    noData.style.display = 'none';
+
+    const headerChk = document.getElementById('chk-select-all');
+    if (headerChk) headerChk.checked = true;
+
+    all.forEach(item => {
+        const tr = document.createElement('tr');
+        const d = new Date(item.timestamp).toLocaleString('ar-YE');
+        const timeParts = item.dto.docTime.split('T');
+        const vTime = timeParts.length > 1 ? timeParts[1] : '';
+
+        let details = "";
+        if (item.type === 'vitals') {
+            details = `حرارة: ${item.dto.temperature}, نبض: ${item.dto.pulseRate}`;
+        } else if (item.type === 'io') {
+            details = `داخل: ${item.dto.inIvf + item.dto.inOral}, خارج: ${item.dto.outUrine}`;
+        } else {
+            details = `نوع: ${item.dto.procedureType === 1 ? 'أدوية' : 'إجراءات'}, أصناف: ${item.dto.details.length}`;
+        }
+
+        tr.innerHTML = `
+            <td style="text-align: center;">
+                <input type="checkbox" class="sync-chk-item" data-type="${item.type}" data-id="${item.id}" checked onchange="updateSyncHeaderState()">
+            </td>
+            <td><span class="badge ${item.type === 'vitals' ? 'badge-info' : item.type === 'io' ? 'badge-warning' : 'badge-success'}">${item.label}</span></td>
+            <td>${d}</td>
+            <td>${vTime}</td>
+            <td>${details}</td>
+            <td>
+                <button class="btn-delete" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor:pointer;" onclick="deleteSyncItem('${item.type}', ${item.id})">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    updateReviewButtonState();
+}
+
+async function deleteSyncItem(type, id) {
+    const isConfirmed = await appConfirm('هل أنت متأكد من حذف هذا السجل نهائياً قبل ارساله للسيرفر؟');
+    if (isConfirmed) {
+        if (type === 'vitals') await removeUnsyncedVital(id);
+        else if (type === 'io') await removeUnsyncedIO(id);
+        else await removeUnsyncedDoctorOrder(id);
+        checkSyncStatus();
+        loadUnsyncedTable();
+    }
+}
+
+async function performSyncAll() {
+    if (!navigator.onLine) {
+        appAlert("أنت غير متصل بالإنترنت حالياً! يرجى الاتصال بالشبكة للمزامنة.", 'warning');
+        return;
+    }
+
+    const selectedCheckboxes = Array.from(document.querySelectorAll('.sync-chk-item:checked'));
+    if (selectedCheckboxes.length === 0) {
+        appAlert("⚠️ لم يتم تحديد أي سجل لمزامنته! يرجى تحديد السجلات المراد رفعها.", 'warning');
+        return;
+    }
+
+    const unsyncedVitals = await getFromDB('unsynced_vitals') || [];
+    const unsyncedIO = await getFromDB('unsynced_io') || [];
+    const unsyncedOrders = await getFromDB('unsynced_doctor_orders') || [];
+    const all = [
+        ...unsyncedVitals.map(v => ({ ...v, type: 'vitals' })),
+        ...unsyncedIO.map(io => ({ ...io, type: 'io' })),
+        ...unsyncedOrders.map(o => ({ ...o, type: 'order' }))
+    ];
+
+    const selectedKeys = new Set(selectedCheckboxes.map(c => `${c.dataset.type}_${c.dataset.id}`));
+    const itemsToSync = all.filter(item => selectedKeys.has(`${item.type}_${item.id}`));
+
+    if (itemsToSync.length === 0) {
+        appAlert("⚠️ لم يتم تحديد أي سجل لمزامنته!", 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btn-sync-all');
+    btn.disabled = true;
+
+    const progressContainer = document.getElementById('sync-progress-container');
+    const progressBar = document.getElementById('sync-progress-bar');
+    const progressText = document.getElementById('sync-progress-text');
+    const progressPercent = document.getElementById('sync-progress-percent');
+
+    progressContainer.style.display = 'block';
+
+    let successCount = 0;
+    let failCount = 0;
+    let lastFailReason = "";
+    const total = itemsToSync.length;
+
+    for (let i = 0; i < total; i++) {
+        let item = itemsToSync[i];
+        try {
+            let fetchUrl = item.url;
+            let fetchMethod = item.method;
+
+            // Fix for servers that block PUT (Method Not Allowed 405)
+            // If it's a doctor order and was saved as PUT, convert to POST and use base URL
+            if (item.type === 'order' && fetchMethod === 'PUT') {
+                fetchMethod = 'POST';
+                // Remove the ID from the URL if it exists, use base /DoctorOrder
+                if (fetchUrl.includes('/DoctorOrder/')) {
+                    fetchUrl = fetchUrl.split('/DoctorOrder/')[0] + '/DoctorOrder';
+                }
+            }
+
+            const res = await fetch(fetchUrl, {
+                method: fetchMethod,
+                headers: getHeaders(),
+                body: JSON.stringify(item.dto)
+            });
+
+            if (res.ok) {
+                if (item.type === 'vitals') await removeUnsyncedVital(item.id);
+                else if (item.type === 'io') await removeUnsyncedIO(item.id);
+                else await removeUnsyncedDoctorOrder(item.id);
+                successCount++;
+            } else {
+                let errText = "";
+                try {
+                    const errJson = await res.json();
+                    errText = errJson.message || errJson.title || JSON.stringify(errJson);
+                } catch (e) {
+                    try { errText = await res.text(); } catch (e2) {}
+                }
+                console.error(`Sync error [${res.status}] for ${item.type} (ID ${item.id}):`, errText, item.dto);
+                failCount++;
+                lastFailReason = errText || `HTTP ${res.status}`;
+            }
+        } catch (e) {
+            console.error("Sync exception:", e);
+            failCount++;
+            lastFailReason = e.message || "خطأ في الشبكة أو الاتصال بالسيرفر";
+        }
+
+        let percentage = Math.round(((i + 1) / total) * 100);
+        progressBar.style.width = percentage + '%';
+        progressPercent.innerText = percentage + '%';
+        progressText.innerText = `جاري رفع ${i + 1} من ${total}...`;
+    }
+
+    setTimeout(() => {
+        progressContainer.style.display = 'none';
+        btn.disabled = false;
+
+        let msg = `✅ تمت مزامنة ${successCount} سجلات بنجاح!`;
+        if (failCount > 0) {
+            msg += `\n❌ فشلت مزامنة ${failCount} سجلات.\nسبب الخطأ من السيرفر: ${lastFailReason}`;
+            appAlert(msg, 'error');
+        } else {
+            appAlert(msg, 'success');
+        }
+
+        checkSyncStatus();
+        loadUnsyncedTable();
+    }, 800);
+}

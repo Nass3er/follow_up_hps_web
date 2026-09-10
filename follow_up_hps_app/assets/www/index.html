@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام متابعة المرضى - HPS | الرئيسية</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1565c0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+</head>
+
+<body>
+    <div class="app-layout">
+        <nav class="top-nav">
+            <div class="brand">
+                <h1 id="company-name-title">🏥 نظام متابعة المرضى (HPS)</h1>
+            </div>
+            <div class="nav-actions">
+                <div class="user-info">
+                    التاريخ: <span id="cur-dt"></span>
+                </div>
+                <button onclick="logout()" class="btn-logout">تسجيل خروج 🚪</button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <h2 class="welcome-text">مرحباً بك ...</h2>
+            <p style="color:var(--text-muted); margin-bottom: 20px;">اختر أحد الخدمات التالية للبدء بالعمل:</p>
+
+            <!-- Sync Card Container -->
+            <div id="sync-dashboard-card"
+                style="display: none; background: #fff3e0; border: 1px solid #ffb74d; border-radius: 12px; padding: 15px 20px; margin-bottom: 30px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;"
+                onclick="window.location.href='sync.html'">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 24px;">🔄</span>
+                    <span style="font-size: 16px; font-weight: bold; color: #e67e22;" id="sync-dashboard-text">لديك
+                        سجلات تحتاج إلى مزامنة</span>
+                </div>
+                <span style="font-size: 20px; color: #e67e22;">⬅️</span>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- New Patient Follow-up Page (Recommended) -->
+                <a href="patient-dashboard.html" class="dash-card" style="border: 2px solid #1565c0; background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);">
+                    <div class="dash-icon">👤</div>
+                    <h3>متابعة مريض</h3>
+                    <p>البحث عن مريض ومتابعة حالته (علامات، سوائل، أوامر) في مكان واحد وبسهولة</p>
+                    <span style="position: absolute; top: 10px; left: 10px; background: #1565c0; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">جديد ✨</span>
+                </a>
+                <a href="vitals.html" class="dash-card">
+                    <div class="dash-icon">🩺</div>
+                    <h3>العلامات الحيوية</h3>
+                    <p>تسجيل علامات المريض الحيوية كل ساعة ومتابعة التطورات</p>
+                </a>
+
+                <a href="intake_output.html" class="dash-card">
+                    <div class="dash-icon">💧</div>
+                    <h3>السوائل (Intake & Output)</h3>
+                    <p>متابعة السوائل المغذية (داخل) والمفرزات (خارج) للمريض</p>
+                </a>
+
+                <a href="doctor-orders.html" class="dash-card"
+                    style="border: 2px solid #55efc4; background-color: #e5fdf5;">
+                    <div class="dash-icon">📋</div>
+                    <h3>أوامر الأطباء</h3>
+                    <p>إدارة وتسجيل الأدوية والفحوصات والأشعة الخاصة بالمريض</p>
+                </a>
+
+                <a href="settings.html" class="dash-card">
+                    <div class="dash-icon">⚙️</div>
+                    <h3>الإعدادات والنسخ</h3>
+                    <p>إدارة البيانات المحلية والنسخ الاحتياطي</p>
+                </a>
+
+                <!-- <a href="javascript:void(0)" class="dash-card disabled"
+                    onclick="alert('سيتم إضافتها قريباً في التحديث القادم')">
+                    <div class="dash-icon">📋</div>
+                    <h3>ملاحظات التمريض</h3>
+                    <p>كتابة ومراجعة النوتات وملاحظات التمريض للمريض</p>
+                </a>
+
+                <a href="javascript:void(0)" class="dash-card disabled"
+                    onclick="alert('سيتم إضافتها قريباً في التحديث القادم')">
+                    <div class="dash-icon">📊</div>
+                    <h3>التقارير والإحصائيات</h3>
+                    <p>ملخصات وتقارير العناية بالمريض وتقارير الخروج</p>
+                </a> -->
+
+            </div>
+        </main>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/db.js"></script>
+    <script src="assets/js/sync.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!getToken()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            document.getElementById('cur-dt').innerText = new Date().toLocaleDateString('ar-YE');
+            
+            // Load and display company name dynamically
+            fetchCompanyName();
+        });
+
+        async function fetchCompanyName() {
+            const cachedName = localStorage.getItem('cached_company_name');
+            const titleElem = document.getElementById('company-name-title');
+            if (cachedName && titleElem) {
+                titleElem.innerText = cachedName;
+            }
+
+            try {
+                const apiUrl = getBaseApiUrl();
+                const res = await fetch(`${apiUrl}/company/name`, {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.companyName && titleElem) {
+                        titleElem.innerText = data.companyName;
+                        localStorage.setItem('cached_company_name', data.companyName);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch company name:', e);
+            }
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered directly in HTML:', reg.scope))
+                    .catch(err => console.warn('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
