@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hps-app-v8';
+const CACHE_NAME = 'hps-app-v9';
 const urlsToCache = [
     './',
     './index.html',
@@ -29,7 +29,7 @@ self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            console.log('SW: Pre-caching v7 (Resilient Installation)');
+            console.log('SW: Pre-caching v9 (Resilient Installation)');
             return Promise.all(
                 urlsToCache.map(url => {
                     return cache.add(url).catch(err => {
@@ -60,7 +60,10 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+    // Only handle GET requests with http/https scheme and ignore /api/ requests
+    if (event.request.method !== 'GET' || 
+        !event.request.url.startsWith('http') || 
+        event.request.url.includes('/api/')) {
         return;
     }
 
@@ -69,7 +72,9 @@ self.addEventListener('fetch', event => {
             return cache.match(event.request).then(cachedResponse => {
                 const fetchPromise = fetch(event.request).then(networkResponse => {
                     if (networkResponse && networkResponse.status === 200) {
-                        cache.put(event.request, networkResponse.clone());
+                        try {
+                            cache.put(event.request, networkResponse.clone()).catch(() => {});
+                        } catch (e) {}
                     }
                     return networkResponse;
                 }).catch(() => {
