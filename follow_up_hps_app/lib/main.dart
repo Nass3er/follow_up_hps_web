@@ -4,7 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'views/login_view.dart';
 
-const bool USE_WEBVIEW_MODE = false;
+const bool USE_WEBVIEW_MODE = true;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

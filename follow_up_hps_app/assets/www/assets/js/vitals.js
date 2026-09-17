@@ -31,8 +31,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter' || e.key === 'Tab') {
             const nurse = NURSE_LIST.find(n => n.empNo == e.target.value);
             if (nurse) document.getElementById('n-name').value = nurse.empName;
-            else { alert("الممرض غير موجود"); document.getElementById('n-name').value = ""; }
+            else { appAlert("الممرض غير موجود", 'error'); document.getElementById('n-name').value = "ممرض غير معروف"; }
             e.preventDefault();
+        }
+    });
+
+    document.getElementById('n-id')?.addEventListener('blur', (e) => {
+        const val = parseInt(e.target.value) || 0;
+        if (val > 0) {
+            const nurse = NURSE_LIST.find(n => n.empNo == val);
+            document.getElementById('n-name').value = nurse ? nurse.empName : "ممرض غير معروف";
+        } else {
+            document.getElementById('n-name').value = "";
         }
     });
 
@@ -475,6 +485,25 @@ async function saveVitals() {
         if (!docSrlAdmtVal) {
             appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrlAdmt). الرجاء إعادة اختيار المريض.", 'error');
             return;
+        }
+
+        const nurseEmpNoVal = parseInt(document.getElementById('n-id').value) || 0;
+        if (!nurseEmpNoVal) {
+            appAlert("⚠️ لا يمكن الحفظ! حقل رقم الممرض إجباري. الرجاء اختيار أو إدخال رقم الممرض.", 'warning');
+            return;
+        }
+
+        if (!NURSE_LIST || NURSE_LIST.length === 0) {
+            await fetchNurses();
+        }
+
+        const validNurse = (NURSE_LIST || []).find(n => n.empNo == nurseEmpNoVal);
+        if (!validNurse) {
+            document.getElementById('n-name').value = "ممرض غير معروف";
+            appAlert(`⚠️ لا يمكن الحفظ! رقم الممرض المدخل (${nurseEmpNoVal}) غير موجود ضمن قائمة الممرضين المعتمدين. الرجاء التحقق من الرقم.`, 'error');
+            return;
+        } else {
+            document.getElementById('n-name').value = validNurse.empName;
         }
 
         dto = {

@@ -12,11 +12,17 @@ class Admission {
   });
 
   factory Admission.fromJson(Map<String, dynamic> json) {
+    final rawDocNo = json['docNo'] ?? json['DocNo'] ?? json['doc_no'] ?? json['docNum'] ?? '';
+    final rawSerial = json['docSerial'] ?? json['DocSerial'] ?? json['docSrl'] ?? json['docSrlAdmt'] ?? json['doc_serial'] ?? json['doc_srl'] ?? 0;
+    final parsedSerial = rawSerial is int ? rawSerial : (int.tryParse(rawSerial.toString()) ?? 0);
+    final rawName = json['patientName'] ?? json['PatientName'] ?? json['patName'] ?? json['name'] ?? json['patient_name'] ?? 'بدون اسم';
+    final rawDate = json['date'] ?? json['Date'] ?? json['admDate'] ?? json['docDate'] ?? json['createdDate'];
+
     return Admission(
-      docNo: json['docNo'],
-      docSerial: json['docSerial'] ?? 0,
-      patientName: json['patientName'] ?? 'بدون اسم',
-      date: json['date'],
+      docNo: rawDocNo,
+      docSerial: parsedSerial,
+      patientName: rawName.toString(),
+      date: rawDate?.toString(),
     );
   }
 }

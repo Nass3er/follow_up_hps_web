@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 import '../models/patient.dart';
 import '../models/vital_sign.dart';
@@ -120,8 +121,49 @@ class ApiService {
         headers: headers,
       ).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        return data.map((json) => Admission.fromJson(json)).toList();
+        final dynamic decoded = jsonDecode(response.body);
+        List listData = [];
+        if (decoded is List) {
+          listData = decoded;
+        } else if (decoded is Map && decoded['data'] is List) {
+          listData = decoded['data'];
+        } else if (decoded is Map && decoded['admissions'] is List) {
+          listData = decoded['admissions'];
+        }
+
+        final list = listData
+            .whereType<Map<String, dynamic>>()
+            .map((json) => Admission.fromJson(json))
+            .toList();
+
+        if (list.isNotEmpty) {
+          await _saveAdmissionsCache(listData);
+        }
+        return list;
+      }
+    } catch (e) {
+      // Offline or network error fallback
+    }
+    return await _getAdmissionsCache();
+  }
+
+  static Future<void> _saveAdmissionsCache(List data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cached_admissions_json', jsonEncode(data));
+    } catch (_) {}
+  }
+
+  static Future<List<Admission>> _getAdmissionsCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString('cached_admissions_json');
+      if (str != null && str.isNotEmpty) {
+        final List data = jsonDecode(str);
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map((json) => Admission.fromJson(json))
+            .toList();
       }
     } catch (_) {}
     return [];
