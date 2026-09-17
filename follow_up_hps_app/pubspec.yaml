@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.17.0 <4.0.0'
+  sdk: '>=2.17.0 <3.0.0'
 
 dependencies:
   flutter:
@@ -12,7 +12,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   webview_flutter: ^3.0.4
-  path: 1.8.1
+  path: ^1.8.1
+  http: ^0.13.4
+  shared_preferences: ^2.0.15
+  sqflite: ^2.0.3+1
+  google_fonts: ^3.0.1
+  intl: any
 
 dev_dependencies:
   flutter_test:

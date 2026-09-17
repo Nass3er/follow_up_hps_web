@@ -1,14 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'views/login_view.dart';
 
-// =========================================================================
-// 🔘 مفتاح التحكم لتحديد نمط تشغيل التطبيق (Toggle Switch)
-// - اجعله true لفتح التطبيق من خلال ملفات الويب المدمجة (WebView Mode)
-// - اجعله false لفتح التطبيق من خلال شاشات فلاتر الأصلية (Native Flutter Mode)
-// =========================================================================
-const bool USE_WEBVIEW_MODE = true;
+const bool USE_WEBVIEW_MODE = false;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,10 +22,30 @@ class HpsFollowUpApp extends StatelessWidget {
     return MaterialApp(
       title: 'متابعة المرضى HPS',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'SA'),
+      supportedLocales: const [
+        Locale('ar', 'SA'),
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         primaryColor: const Color(0xFF1565C0),
+        scaffoldBackgroundColor: const Color(0xFFF4F6F9),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1565C0),
+        ),
         useMaterial3: true,
       ),
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child!,
+        );
+      },
       home: USE_WEBVIEW_MODE ? const MainWebViewScreen() : const LoginView(),
     );
   }
@@ -72,4 +88,3 @@ class _MainWebViewScreenState extends State<MainWebViewScreen> {
     );
   }
 }
-

@@ -1,71 +1,79 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'api_service.dart';
+import 'auth_service.dart';
 import 'db_helper.dart';
 
 class SyncService {
   static Future<Map<String, dynamic>> syncAllPendingRecords() async {
-    int syncedVitals = 0;
-    int syncedIO = 0;
-    int syncedOrders = 0;
-    int failedCount = 0;
+    int synced = 0;
+    int failed = 0;
 
     try {
-      // 1. Sync Vitals
       final unsyncedVitals = await DBHelper.getUnsyncedVitals();
       for (var vital in unsyncedVitals) {
-        final success = await ApiService.postVitalSign(vital);
-        if (success) {
-          if (vital.id != null) {
-            await DBHelper.markVitalSynced(vital.id!);
-          }
-          syncedVitals++;
+        final result = await ApiService.saveVitalSign(vital);
+        if (result['success'] == true) {
+          if (vital.localId != null) await DBHelper.markVitalSynced(vital.localId!);
+          synced++;
         } else {
-          failedCount++;
+          failed++;
         }
       }
 
-      // 2. Sync Intake & Output
       final unsyncedIO = await DBHelper.getUnsyncedIO();
       for (var io in unsyncedIO) {
-        final success = await ApiService.postIORecord(io);
-        if (success) {
-          if (io.id != null) {
-            await DBHelper.markIOSynced(io.id!);
+        final result = await ApiService.saveIORecord(io);
+        if (result['success'] == true) {
+          if (io.localId != null) await DBHelper.markIOSynced(io.localId!);
+          synced++;
+        } else {
+          failed++;
+        }
+      }
+
+      final unsyncedRecords = await DBHelper.getUnsyncedRecords();
+      for (var rec in unsyncedRecords) {
+        try {
+          final baseUrl = await AuthService.getBaseUrl();
+          final token = await AuthService.getToken();
+          final url = Uri.parse('$baseUrl${rec['apiUrl']}');
+          final headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          };
+          final body = rec['dto'] ?? '{}';
+          final method = rec['httpMethod'] ?? 'POST';
+
+          http.Response response;
+          if (method == 'DELETE') {
+            response = await http.delete(url, headers: headers);
+          } else {
+            response = await http.post(url, headers: headers, body: body);
           }
-          syncedIO++;
-        } else {
-          failedCount++;
+
+          if (response.statusCode == 200) {
+            await DBHelper.deleteUnsyncedRecord(rec['id'] as int);
+            synced++;
+          } else {
+            failed++;
+          }
+        } catch (_) {
+          failed++;
         }
       }
 
-      // 3. Sync Executed Doctor Orders
-      final unsyncedOrders = await DBHelper.getUnsyncedDoctorOrders();
-      for (var order in unsyncedOrders) {
-        final success = await ApiService.markDoctorOrderExecuted(order.id, order.executionNotes ?? '');
-        if (success) {
-          await DBHelper.markDoctorOrderSynced(order.id);
-          syncedOrders++;
-        } else {
-          failedCount++;
-        }
-      }
-
-      final totalSynced = syncedVitals + syncedIO + syncedOrders;
       return {
         'success': true,
-        'totalSynced': totalSynced,
-        'syncedVitals': syncedVitals,
-        'syncedIO': syncedIO,
-        'syncedOrders': syncedOrders,
-        'failedCount': failedCount,
-        'message': totalSynced > 0
-            ? 'تمت مزامنة $totalSynced سجل بنجاح.'
-            : 'لا توجد سجلات معلقة بحاجة للمزامنة.'
+        'totalSynced': synced,
+        'failedCount': failed,
+        'message': synced > 0
+            ? 'تمت مزامنة $synced سجل بنجاح.'
+            : 'لا توجد سجلات معلقة.',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'حدث خطأ أثناء المزامنة: ${e.toString()}'
-      };
+      return {'success': false, 'message': 'خطأ أثناء المزامنة: $e'};
     }
   }
 }
