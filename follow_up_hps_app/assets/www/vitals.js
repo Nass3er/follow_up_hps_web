@@ -518,7 +518,7 @@ async function saveVitals() {
             bedNo: parseInt(CURRENT_ADMISSION.bedNo) || 0,
             roomSer: parseInt(CURRENT_ADMISSION.roomService || CURRENT_ADMISSION.roomSer) || 0,
             buildingNo: parseInt(CURRENT_ADMISSION.buldNo || CURRENT_ADMISSION.buildingNo) || 0,
-            docTime: `2000-01-01T${SELECTED_TIME}`,
+            docTime: `${document.getElementById('doc-date-input')?.value || new Date().toISOString().split('T')[0]}T${SELECTED_TIME}`,
             nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,
             temperature: getValue('v-temp'),
             pulseRate: getValue('v-pulse'),

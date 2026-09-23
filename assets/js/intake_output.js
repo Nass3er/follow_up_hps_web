@@ -276,15 +276,37 @@ async function loadAndShowTable() {
         });
         if (res.ok) {
             const rawData = await res.json();
-            // Normalize server records: filter by date strictly
-            savedData = rawData.filter(d => {
-                const date1 = parseDate(d.docTime);
-                const date2 = parseDate(d.docDate);
-                return date1 === targetDate || date2 === targetDate;
+            // Normalize server records
+            savedData = (rawData || []).filter(d => {
+                const itemDate = parseDate(d.docDate || d.DocDate || d.docTime || d.DocTime);
+                return !targetDate || !itemDate || itemDate === targetDate;
             }).map(d => {
-                let t = d.docTime.includes('T') ? d.docTime.split('T')[1] : (d.docTime.includes(' ') ? d.docTime.split(' ')[1] : d.docTime);
-                t = t.split('.')[0]; // Remove milliseconds if any
-                return { ...d, docTime: t };
+                const rawSrl = d.docSrl ?? d.DocSrl ?? 0;
+                const rawTime = (d.docTime || d.DocTime || "").toString();
+                let t = rawTime.includes('T') ? rawTime.split('T')[1] : (rawTime.includes(' ') ? rawTime.split(' ')[1] : rawTime);
+                t = t.split('.')[0]; // Remove milliseconds
+                if (t.length === 5) t = t + ':00'; // Ensure HH:MM:00 format
+
+                return {
+                    docSrl: rawSrl,
+                    docNo: d.docNo ?? d.DocNo ?? "",
+                    docDate: d.docDate ?? d.DocDate ?? "",
+                    docTime: t,
+                    nurseName: d.nurseName ?? d.NurseName ?? "",
+                    nurseEmpNo: d.nurseEmpNo ?? d.NurseEmpNo ?? 0,
+                    inIvf: parseFloat(d.inIvf ?? d.InIvf) || 0,
+                    inOral: parseFloat(d.inOral ?? d.InOral) || 0,
+                    inNgt: parseFloat(d.inNgt ?? d.InNgt) || 0,
+                    inBld: parseFloat(d.inBld ?? d.InBld) || 0,
+                    inOthr: parseFloat(d.inOthr ?? d.InOthr) || 0,
+                    outUrine: parseFloat(d.outUrine ?? d.OutUrine) || 0,
+                    outGstrc: parseFloat(d.outGstrc ?? d.OutGstrc) || 0,
+                    outEmss: parseFloat(d.outEmss ?? d.OutEmss) || 0,
+                    outDrng1: parseFloat(d.outDrng1 ?? d.OutDrng1 ?? d.outDrng_1 ?? d.OutDrng_1) || 0,
+                    outDrng2: parseFloat(d.outDrng2 ?? d.OutDrng2 ?? d.outDrng_2 ?? d.OutDrng_2) || 0,
+                    outOthr: parseFloat(d.outOthr ?? d.OutOthr) || 0,
+                    notes: d.notes ?? d.Notes ?? ""
+                };
             });
             await saveToDB('io_history', [{ cacheKey: cacheString, data: savedData }], false);
         } else {
