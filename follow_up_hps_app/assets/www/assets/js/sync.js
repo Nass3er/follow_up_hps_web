@@ -98,11 +98,12 @@ async function reviewSelectedSyncItem() {
     }
 
     // Save patient context so target screen opens patient details
+    const rawSrl = record.dto.docSrlAdmt || record.dto.docSrlAdmission || record.dto.docSrl || record.dto.docSerial || "";
     const patientContext = {
         ...record.dto,
         docNo: record.dto.docNo || record.dto.docNoAdmission,
-        docSrl: record.dto.docSrlAdmt || record.dto.docSrlAdmission,
-        docSerial: record.dto.docSrlAdmt || record.dto.docSrlAdmission,
+        docSrl: rawSrl.toString(),
+        docSerial: rawSrl.toString(),
         patientNo: record.dto.patientNo,
         branchNo: record.dto.branchNo
     };

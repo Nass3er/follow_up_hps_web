@@ -14,7 +14,7 @@ const setVal = (id, val) => { const el = document.getElementById(id); if (el) el
 const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
 const getInt = (id) => parseInt(getVal(id)) || 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     checkAuth();
 
     const now = new Date();
@@ -39,9 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navigator.onLine) preloadAllItems();
     });
 
-    document.getElementById('adm-no-input')?.addEventListener('keydown', (e) => {
+    document.getElementById('adm-no-input')?.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
-            searchAdmission(e.target.value);
+            await searchAdmission(e.target.value);
             e.preventDefault();
         }
     });
@@ -60,12 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedPatient) {
         try {
             const details = JSON.parse(savedPatient);
-            if (details && !details.docSrl) {
-                details.docSrl = details.docSerial || details.docSrlAdmt || details.doc_srl;
+            const rawDocNo = details.docNo || details.doc_no || "";
+            const rawSrl = (details.docSrl || details.docSerial || details.docSrlAdmt || details.doc_srl || "").toString();
+
+            if (details.branchNo) {
+                document.getElementById('branch-list').value = details.branchNo;
             }
-            document.getElementById('branch-list').value = details.branchNo || "";
-            document.getElementById('adm-no-input').value = details.docNo;
-            selectAdmission(details.docNo, details.docSrl || details.docSerial).then(() => {
+            if (rawDocNo) {
+                document.getElementById('adm-no-input').value = rawDocNo;
+            }
+
+            if (rawDocNo && rawSrl) {
+                await selectAdmission(rawDocNo, rawSrl);
                 const pendingEdit = localStorage.getItem('edit_unsynced_order');
                 if (pendingEdit) {
                     try {
@@ -74,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => { loadOrder(ref.localSrl); }, 200);
                     } catch (e) { }
                 }
-            });
+            }
             updateUIForState('NEW'); // Prepare for a new order for this patient
             localStorage.removeItem('selected_patient');
         } catch (e) { console.error("Error loading saved patient", e); }
@@ -199,10 +205,22 @@ async function openHistoryModal() {
         let history = [];
         let historyUrl = `${getBaseApiUrl()}/DoctorOrder/history`;
         
-        // سيناريو 1: إذا كان هناك ترقيد محدد (من شاشة متابعة مريض أو مدخل)
-        const docSrlAdmt = CURRENT_ADMISSION ? (CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl) : null;
-        if (docSrlAdmt && parseInt(docSrlAdmt) > 0) {
-            historyUrl += `?docSrlAdmission=${docSrlAdmt}`;
+        const admInputVal = (getVal('adm-no-input') || "").trim();
+        let patientNoVal = (getVal('patient-no') || "").trim();
+
+        if (CURRENT_ADMISSION && (CURRENT_ADMISSION.docNo == admInputVal || !admInputVal)) {
+            patientNoVal = CURRENT_ADMISSION.patientNo || patientNoVal;
+        } else if (admInputVal) {
+            try {
+                await searchAdmission(admInputVal);
+                if (CURRENT_ADMISSION) {
+                    patientNoVal = CURRENT_ADMISSION.patientNo || patientNoVal;
+                }
+            } catch (e) { }
+        }
+
+        if (admInputVal && patientNoVal) {
+            historyUrl += `?patientNo=${encodeURIComponent(patientNoVal)}`;
         }
 
         try {
@@ -219,8 +237,8 @@ async function openHistoryModal() {
 
         const unsynced = await getFromDB('unsynced_doctor_orders') || [];
         let localUnsynced = unsynced;
-        if (docSrlAdmt && parseInt(docSrlAdmt) > 0) {
-            localUnsynced = unsynced.filter(item => item.dto && (item.dto.docSrlAdmission == docSrlAdmt || item.dto.docSrlAdmt == docSrlAdmt));
+        if (admInputVal && patientNoVal) {
+            localUnsynced = unsynced.filter(item => item.dto && item.dto.patientNo === patientNoVal);
         }
 
         const localHistory = localUnsynced.map(item => ({
@@ -235,10 +253,17 @@ async function openHistoryModal() {
 
         CACHED_HISTORY = [...localHistory, ...history];
 
+        // Sort DESCENDING: Latest added orders FIRST at the top of the list
         CACHED_HISTORY.sort((a, b) => {
-            const srlA = a.docSrl.toString().startsWith('local_') ? 9999999999 : parseInt(a.docSrl);
-            const srlB = b.docSrl.toString().startsWith('local_') ? 9999999999 : parseInt(b.docSrl);
-            return srlB - srlA;
+            const getSortWeight = (item) => {
+                if (!item || !item.docSrl) return 0;
+                const str = item.docSrl.toString();
+                if (str.startsWith('local_')) {
+                    return 99999999999999999999;
+                }
+                return parseFloat(str) || 0;
+            };
+            return getSortWeight(b) - getSortWeight(a);
         });
 
         renderHistory(CACHED_HISTORY);
@@ -585,20 +610,20 @@ async function searchAdmission(docNo) {
         if (res.ok) {
             const list = await res.json();
             await saveToDB('admissions', list);
-            handleFoundAdmission(list, docNo);
+            await handleFoundAdmission(list, docNo);
         } else {
             throw new Error('API Error');
         }
     } catch (e) {
         console.warn('Offline: Searching admissions from DB');
         const list = await getFromDB('admissions') || [];
-        handleFoundAdmission(list, docNo);
+        await handleFoundAdmission(list, docNo);
     }
 }
 
-function handleFoundAdmission(list, docNo) {
+async function handleFoundAdmission(list, docNo) {
     const admission = list.find(a => a.docNo == docNo);
-    if (admission) selectAdmission(admission.docNo, admission.docSerial);
+    if (admission) await selectAdmission(admission.docNo, (admission.docSerial || admission.docSrl || "").toString());
     else appAlert("رقم الترقيد غير موجود", 'error');
 }
 
@@ -654,33 +679,48 @@ function filterAdmissions() {
 }
 
 async function selectAdmission(no, srl) {
+    if (!no) return;
     document.getElementById('adm-no-input').value = no;
-    const cacheKey = `${no}_${srl}`;
+    
+    const srlStr = (srl || "").toString();
+    const cacheKey = srlStr ? `${no}_${srlStr}` : `${no}`;
+
     try {
         let details = null;
-        try {
-            const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions/details?docNo=${no}&docSrl=${srl}`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
+        if (navigator.onLine && srlStr && srlStr !== "0") {
+            try {
+                const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions/details?docNo=${no}&docSrl=${srlStr}`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
 
-            if (res.ok) {
-                details = await res.json();
-                const cacheObj = { ...details, cacheKey, docNo: no, docSrl: srl };
-                await saveToDB('patients_details', cacheObj, false);
-                details = cacheObj;
-            } else {
-                throw new Error("HTTP " + res.status);
+                if (res.ok) {
+                    details = await res.json();
+                    const cacheObj = { ...details, cacheKey, docNo: no, docSrl: srlStr, docSerial: srlStr };
+                    await saveToDB('patients_details', cacheObj, false);
+                    details = cacheObj;
+                }
+            } catch (e) {
+                console.warn("Offline or fetch error: Fetching patient details from DB", e);
             }
-        } catch (e) {
-            console.warn("Offline: Fetching patient details from DB");
-            const detailsList = await getFromDB('patients_details');
-            details = detailsList.find(d => d.cacheKey === cacheKey);
+        }
+
+        if (!details) {
+            const detailsList = await getFromDB('patients_details') || [];
+            const listArr = Array.isArray(detailsList) ? detailsList : [detailsList];
+            details = listArr.find(d => 
+                d && (
+                    (cacheKey && d.cacheKey === cacheKey) ||
+                    (srlStr && (d.docSrl == srlStr || d.docSerial == srlStr)) ||
+                    (no && d.docNo == no)
+                )
+            );
         }
 
         if (!details) throw new Error("لا توجد بيانات محفوظة لهذا الترقيد. يرجى فتحه مرة واحدة أثناء توفر الإنترنت.");
 
-        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl, docSerial: srl };
+        const finalSrl = (details.docSrl || details.docSerial || srlStr || "").toString();
+        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: finalSrl, docSerial: finalSrl };
 
         setVal('patient-no', details.patientNo);
         setVal('patient-name', details.patientName);
@@ -1060,7 +1100,7 @@ async function saveOrder() {
         priorityNo: getInt('prorty-no') || 1,
 
         docNoAdmission: getInt('adm-no-input'),
-        docSrlAdmission: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl) || 0) : 0,
+        docSrlAdmission: CURRENT_ADMISSION ? ((CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl || "0").toString()) : "0",
         patientNo: getVal('patient-no'),
         roomSer: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomService) || 0) : 0,
         roomNo: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomNo) || 0) : 0,
@@ -1080,7 +1120,7 @@ async function saveOrder() {
 
     // If we are editing an existing record, include its serial in the body too
     if (CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')) {
-        dto.docSrl = parseInt(CURRENT_ORDER_SRL);
+        dto.docSrl = CURRENT_ORDER_SRL.toString();
     }
 
     const allRows = document.querySelectorAll('#details-tbody tr');

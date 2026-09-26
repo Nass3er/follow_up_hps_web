@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedPatient) {
         try {
             const details = JSON.parse(savedPatient);
-            if (details && !details.docSrl) {
-                details.docSrl = details.docSerial || details.docSrlAdmt || details.doc_srl;
+            if (details) {
+                details.docSrl = (details.docSrl || details.docSerial || details.docSrlAdmt || details.doc_srl || "").toString();
             }
             CURRENT_ADMISSION = details;
             document.getElementById('adm-no-input').value = details.docNo;
@@ -323,7 +323,7 @@ async function loadAndShowTable() {
     const unsynced = await getFromDB('unsynced_io');
     if (unsynced) {
         const localItems = unsynced.filter(u =>
-            u.dto.docSrlAdmt == docSrl &&
+            (u.dto.docSrlAdmt || "").toString() === docSrl.toString() &&
             u.dto.docTime && u.dto.docTime.startsWith(docDate)
         ).map(u => ({
             docSrl: `local_${u.id}`,
@@ -478,9 +478,9 @@ async function saveIO() {
     const isUpdate = CURRENT_DOC_SRL !== null && !CURRENT_DOC_SRL.toString().startsWith('local_');
 
     const rawDocSrlAdmt = CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.doc_srl;
-    const docSrlAdmtVal = parseInt(rawDocSrlAdmt) || 0;
+    const docSrlAdmtStr = (rawDocSrlAdmt || "").toString();
 
-    if (!docSrlAdmtVal) {
+    if (!docSrlAdmtStr || docSrlAdmtStr === "0") {
         appAlert("⚠️ لم يتم العثور على رقم الترقيد (docSrlAdmt). الرجاء إعادة اختيار المريض.", 'error');
         return;
     }
@@ -508,13 +508,13 @@ async function saveIO() {
         docSrl: isUpdate ? (parseInt(CURRENT_DOC_SRL) || 0) : 0,
         branchNo: parseInt(document.getElementById('branch-list').value) || 0,
         docNo: (document.getElementById('adm-no-input').value || CURRENT_ADMISSION.docNo || "").toString(),
-        docSrlAdmt: docSrlAdmtVal,
+        docSrlAdmt: docSrlAdmtStr,
         patientNo: CURRENT_ADMISSION.patientNo ? CURRENT_ADMISSION.patientNo.toString() : "",
         age: CURRENT_ADMISSION.age ? CURRENT_ADMISSION.age.toString() : "",
         ageType: parseInt(CURRENT_ADMISSION.ageType) || 0,
         roomNo: parseInt(CURRENT_ADMISSION.roomNo) || 0,
         bedNo: parseInt(CURRENT_ADMISSION.bedNo) || 0,
-        roomSer: parseInt(CURRENT_ADMISSION.roomService || CURRENT_ADMISSION.roomSer) || 0,
+        roomSer: (CURRENT_ADMISSION.roomService || CURRENT_ADMISSION.roomSer || "0").toString(),
         buildingNo: parseInt(CURRENT_ADMISSION.buldNo || CURRENT_ADMISSION.buildingNo) || 0,
         docTime: `${document.getElementById('doc-date-input').value}T${SELECTED_TIME}`,
         nurseEmpNo: parseInt(document.getElementById('n-id').value) || 0,
