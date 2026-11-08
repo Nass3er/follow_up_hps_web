@@ -46,6 +46,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    document.getElementById('adm-no-input')?.addEventListener('change', async (e) => {
+        const val = e.target.value.trim();
+        if (val && (!CURRENT_ADMISSION || CURRENT_ADMISSION.docNo != val)) {
+            await searchAdmission(val);
+        }
+    });
+
     window.onclick = function (event) {
         if (event.target.classList.contains('modal')) {
             event.target.style.display = "none";
@@ -70,8 +77,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.getElementById('adm-no-input').value = rawDocNo;
             }
 
-            if (rawDocNo && rawSrl) {
+            if (rawDocNo && rawSrl && rawSrl !== "0") {
                 await selectAdmission(rawDocNo, rawSrl);
+            } else if (rawDocNo) {
+                await searchAdmission(rawDocNo);
+            }
+            if (rawDocNo) {
                 const pendingEdit = localStorage.getItem('edit_unsynced_order');
                 if (pendingEdit) {
                     try {
@@ -359,9 +370,11 @@ async function loadOrder(docSrl) {
             setVal('p-adm-date', m.admDate || '');
 
             // Important: Populate CURRENT_ADMISSION so saveOrder works correctly for edits
+            const orderAdmSrl = (m.docSrlAdmission || "").toString();
             CURRENT_ADMISSION = {
                 docNo: m.docNoAdmission,
-                docSrl: m.docSrlAdmission || 0,
+                docSrl: orderAdmSrl,
+                docSerial: orderAdmSrl,
                 patientNo: m.patientNo,
                 patientName: m.patientName,
                 roomNo: m.roomNo,
@@ -682,7 +695,14 @@ async function selectAdmission(no, srl) {
     if (!no) return;
     document.getElementById('adm-no-input').value = no;
     
-    const srlStr = (srl || "").toString();
+    let srlStr = (srl || "").toString().trim();
+    if (!srlStr || srlStr === "0") {
+        const cachedAdmList = window.CURRENT_ADM_LIST || (await getFromDB('admissions')) || [];
+        const matchedAdm = Array.isArray(cachedAdmList) ? cachedAdmList.find(a => a && a.docNo == no) : null;
+        if (matchedAdm) {
+            srlStr = (matchedAdm.docSerial || matchedAdm.docSrl || "").toString().trim();
+        }
+    }
     const cacheKey = srlStr ? `${no}_${srlStr}` : `${no}`;
 
     try {
@@ -711,15 +731,14 @@ async function selectAdmission(no, srl) {
             details = listArr.find(d => 
                 d && (
                     (cacheKey && d.cacheKey === cacheKey) ||
-                    (srlStr && (d.docSrl == srlStr || d.docSerial == srlStr)) ||
-                    (no && d.docNo == no)
+                    (srlStr && srlStr !== "0" && (d.docSrl == srlStr || d.docSerial == srlStr))
                 )
-            );
+            ) || listArr.find(d => d && no && d.docNo == no);
         }
 
         if (!details) throw new Error("لا توجد بيانات محفوظة لهذا الترقيد. يرجى فتحه مرة واحدة أثناء توفر الإنترنت.");
 
-        const finalSrl = (details.docSrl || details.docSerial || srlStr || "").toString();
+        const finalSrl = (srlStr && srlStr !== "0") ? srlStr : (details.docSrl || details.docSerial || "").toString();
         CURRENT_ADMISSION = { ...details, docNo: no, docSrl: finalSrl, docSerial: finalSrl };
 
         setVal('patient-no', details.patientNo);
@@ -1074,6 +1093,12 @@ function selectItem(itemData) {
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 async function saveOrder() {
+    const admNoInput = getInt('adm-no-input');
+    const currentSrl = CURRENT_ADMISSION ? (CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl || "").toString().trim() : "";
+    if (admNoInput > 0 && (!CURRENT_ADMISSION || CURRENT_ADMISSION.docNo != admNoInput || !currentSrl || currentSrl === "0")) {
+        await searchAdmission(admNoInput);
+    }
+
     if (!CURRENT_ADMISSION && !IS_EDIT_MODE) return appAlert("يرجى اختيار مريض أولاً", "error");
 
     const procedureType = document.getElementById('prcdr-typ').value;

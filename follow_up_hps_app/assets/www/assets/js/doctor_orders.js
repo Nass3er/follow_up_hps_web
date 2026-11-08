@@ -14,7 +14,7 @@ const setVal = (id, val) => { const el = document.getElementById(id); if (el) el
 const getVal = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
 const getInt = (id) => parseInt(getVal(id)) || 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     checkAuth();
 
     const now = new Date();
@@ -39,10 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navigator.onLine) preloadAllItems();
     });
 
-    document.getElementById('adm-no-input')?.addEventListener('keydown', (e) => {
+    document.getElementById('adm-no-input')?.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter' || e.key === 'Tab') {
-            searchAdmission(e.target.value);
+            await searchAdmission(e.target.value);
             e.preventDefault();
+        }
+    });
+
+    document.getElementById('adm-no-input')?.addEventListener('change', async (e) => {
+        const val = e.target.value.trim();
+        if (val && (!CURRENT_ADMISSION || CURRENT_ADMISSION.docNo != val)) {
+            await searchAdmission(val);
         }
     });
 
@@ -70,17 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('adm-no-input').value = rawDocNo;
             }
 
-            if (rawDocNo && rawSrl) {
-                selectAdmission(rawDocNo, rawSrl).then(() => {
-                    const pendingEdit = localStorage.getItem('edit_unsynced_order');
-                    if (pendingEdit) {
-                        try {
-                            const ref = JSON.parse(pendingEdit);
-                            localStorage.removeItem('edit_unsynced_order');
-                            setTimeout(() => { loadOrder(ref.localSrl); }, 200);
-                        } catch (e) { }
-                    }
-                });
+            if (rawDocNo && rawSrl && rawSrl !== "0") {
+                await selectAdmission(rawDocNo, rawSrl);
+            } else if (rawDocNo) {
+                await searchAdmission(rawDocNo);
+            }
+            if (rawDocNo) {
+                const pendingEdit = localStorage.getItem('edit_unsynced_order');
+                if (pendingEdit) {
+                    try {
+                        const ref = JSON.parse(pendingEdit);
+                        localStorage.removeItem('edit_unsynced_order');
+                        setTimeout(() => { loadOrder(ref.localSrl); }, 200);
+                    } catch (e) { }
+                }
             }
             updateUIForState('NEW'); // Prepare for a new order for this patient
             localStorage.removeItem('selected_patient');
@@ -207,22 +217,21 @@ async function openHistoryModal() {
         let historyUrl = `${getBaseApiUrl()}/DoctorOrder/history`;
         
         const admInputVal = (getVal('adm-no-input') || "").trim();
+        let patientNoVal = (getVal('patient-no') || "").trim();
 
-        // Check if CURRENT_ADMISSION is set or if user entered admission number in input
-        let docSrlAdmtStr = "";
         if (CURRENT_ADMISSION && (CURRENT_ADMISSION.docNo == admInputVal || !admInputVal)) {
-            docSrlAdmtStr = (CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl || "").toString();
+            patientNoVal = CURRENT_ADMISSION.patientNo || patientNoVal;
         } else if (admInputVal) {
             try {
                 await searchAdmission(admInputVal);
                 if (CURRENT_ADMISSION) {
-                    docSrlAdmtStr = (CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl || "").toString();
+                    patientNoVal = CURRENT_ADMISSION.patientNo || patientNoVal;
                 }
             } catch (e) { }
         }
 
-        if (docSrlAdmtStr && docSrlAdmtStr !== "0") {
-            historyUrl += `?docSrlAdmission=${docSrlAdmtStr}`;
+        if (admInputVal && patientNoVal) {
+            historyUrl += `?patientNo=${encodeURIComponent(patientNoVal)}`;
         }
 
         try {
@@ -239,11 +248,8 @@ async function openHistoryModal() {
 
         const unsynced = await getFromDB('unsynced_doctor_orders') || [];
         let localUnsynced = unsynced;
-        if (docSrlAdmtStr && docSrlAdmtStr !== "0") {
-            localUnsynced = unsynced.filter(item => item.dto && (
-                (item.dto.docSrlAdmission || "").toString() === docSrlAdmtStr || 
-                (item.dto.docSrlAdmt || "").toString() === docSrlAdmtStr
-            ));
+        if (admInputVal && patientNoVal) {
+            localUnsynced = unsynced.filter(item => item.dto && item.dto.patientNo === patientNoVal);
         }
 
         const localHistory = localUnsynced.map(item => ({
@@ -364,9 +370,11 @@ async function loadOrder(docSrl) {
             setVal('p-adm-date', m.admDate || '');
 
             // Important: Populate CURRENT_ADMISSION so saveOrder works correctly for edits
+            const orderAdmSrl = (m.docSrlAdmission || "").toString();
             CURRENT_ADMISSION = {
                 docNo: m.docNoAdmission,
-                docSrl: m.docSrlAdmission || 0,
+                docSrl: orderAdmSrl,
+                docSerial: orderAdmSrl,
                 patientNo: m.patientNo,
                 patientName: m.patientName,
                 roomNo: m.roomNo,
@@ -615,20 +623,20 @@ async function searchAdmission(docNo) {
         if (res.ok) {
             const list = await res.json();
             await saveToDB('admissions', list);
-            handleFoundAdmission(list, docNo);
+            await handleFoundAdmission(list, docNo);
         } else {
             throw new Error('API Error');
         }
     } catch (e) {
         console.warn('Offline: Searching admissions from DB');
         const list = await getFromDB('admissions') || [];
-        handleFoundAdmission(list, docNo);
+        await handleFoundAdmission(list, docNo);
     }
 }
 
-function handleFoundAdmission(list, docNo) {
+async function handleFoundAdmission(list, docNo) {
     const admission = list.find(a => a.docNo == docNo);
-    if (admission) selectAdmission(admission.docNo, admission.docSerial);
+    if (admission) await selectAdmission(admission.docNo, (admission.docSerial || admission.docSrl || "").toString());
     else appAlert("رقم الترقيد غير موجود", 'error');
 }
 
@@ -684,33 +692,54 @@ function filterAdmissions() {
 }
 
 async function selectAdmission(no, srl) {
+    if (!no) return;
     document.getElementById('adm-no-input').value = no;
-    const cacheKey = `${no}_${srl}`;
+    
+    let srlStr = (srl || "").toString().trim();
+    if (!srlStr || srlStr === "0") {
+        const cachedAdmList = window.CURRENT_ADM_LIST || (await getFromDB('admissions')) || [];
+        const matchedAdm = Array.isArray(cachedAdmList) ? cachedAdmList.find(a => a && a.docNo == no) : null;
+        if (matchedAdm) {
+            srlStr = (matchedAdm.docSerial || matchedAdm.docSrl || "").toString().trim();
+        }
+    }
+    const cacheKey = srlStr ? `${no}_${srlStr}` : `${no}`;
+
     try {
         let details = null;
-        try {
-            const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions/details?docNo=${no}&docSrl=${srl}`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
+        if (navigator.onLine && srlStr && srlStr !== "0") {
+            try {
+                const res = await fetch(`${getBaseApiUrl()}/VitalSigns/admissions/details?docNo=${no}&docSrl=${srlStr}`, {
+                    method: 'POST',
+                    headers: getHeaders()
+                });
 
-            if (res.ok) {
-                details = await res.json();
-                const cacheObj = { ...details, cacheKey, docNo: no, docSrl: srl };
-                await saveToDB('patients_details', cacheObj, false);
-                details = cacheObj;
-            } else {
-                throw new Error("HTTP " + res.status);
+                if (res.ok) {
+                    details = await res.json();
+                    const cacheObj = { ...details, cacheKey, docNo: no, docSrl: srlStr, docSerial: srlStr };
+                    await saveToDB('patients_details', cacheObj, false);
+                    details = cacheObj;
+                }
+            } catch (e) {
+                console.warn("Offline or fetch error: Fetching patient details from DB", e);
             }
-        } catch (e) {
-            console.warn("Offline: Fetching patient details from DB");
-            const detailsList = await getFromDB('patients_details');
-            details = detailsList.find(d => d.cacheKey === cacheKey);
+        }
+
+        if (!details) {
+            const detailsList = await getFromDB('patients_details') || [];
+            const listArr = Array.isArray(detailsList) ? detailsList : [detailsList];
+            details = listArr.find(d => 
+                d && (
+                    (cacheKey && d.cacheKey === cacheKey) ||
+                    (srlStr && srlStr !== "0" && (d.docSrl == srlStr || d.docSerial == srlStr))
+                )
+            ) || listArr.find(d => d && no && d.docNo == no);
         }
 
         if (!details) throw new Error("لا توجد بيانات محفوظة لهذا الترقيد. يرجى فتحه مرة واحدة أثناء توفر الإنترنت.");
 
-        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: srl, docSerial: srl };
+        const finalSrl = (srlStr && srlStr !== "0") ? srlStr : (details.docSrl || details.docSerial || "").toString();
+        CURRENT_ADMISSION = { ...details, docNo: no, docSrl: finalSrl, docSerial: finalSrl };
 
         setVal('patient-no', details.patientNo);
         setVal('patient-name', details.patientName);
@@ -1064,6 +1093,12 @@ function selectItem(itemData) {
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 async function saveOrder() {
+    const admNoInput = getInt('adm-no-input');
+    const currentSrl = CURRENT_ADMISSION ? (CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl || "").toString().trim() : "";
+    if (admNoInput > 0 && (!CURRENT_ADMISSION || CURRENT_ADMISSION.docNo != admNoInput || !currentSrl || currentSrl === "0")) {
+        await searchAdmission(admNoInput);
+    }
+
     if (!CURRENT_ADMISSION && !IS_EDIT_MODE) return appAlert("يرجى اختيار مريض أولاً", "error");
 
     const procedureType = document.getElementById('prcdr-typ').value;
@@ -1090,7 +1125,7 @@ async function saveOrder() {
         priorityNo: getInt('prorty-no') || 1,
 
         docNoAdmission: getInt('adm-no-input'),
-        docSrlAdmission: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl) || 0) : 0,
+        docSrlAdmission: CURRENT_ADMISSION ? ((CURRENT_ADMISSION.docSrl || CURRENT_ADMISSION.docSerial || CURRENT_ADMISSION.docSrlAdmt || CURRENT_ADMISSION.doc_srl || "0").toString()) : "0",
         patientNo: getVal('patient-no'),
         roomSer: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomService) || 0) : 0,
         roomNo: CURRENT_ADMISSION ? (parseInt(CURRENT_ADMISSION.roomNo) || 0) : 0,
@@ -1110,7 +1145,7 @@ async function saveOrder() {
 
     // If we are editing an existing record, include its serial in the body too
     if (CURRENT_ORDER_SRL && !CURRENT_ORDER_SRL.toString().startsWith('local_')) {
-        dto.docSrl = parseInt(CURRENT_ORDER_SRL);
+        dto.docSrl = CURRENT_ORDER_SRL.toString();
     }
 
     const allRows = document.querySelectorAll('#details-tbody tr');
